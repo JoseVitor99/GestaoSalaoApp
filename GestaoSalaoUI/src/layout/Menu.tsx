@@ -15,8 +15,11 @@ const PAGINAS = [
   { label: "Agenda", curto: "Agenda", icon: "pi pi-calendar", rota: "/agenda", admin: false },
   { label: "Clientes", curto: "Clientes", icon: "pi pi-users", rota: "/clientes", admin: false },
   { label: "Funcionários", curto: "Equipe", icon: "pi pi-id-card", rota: "/funcionarios", admin: true },
-  { label: "Serviços", curto: "Serviços", icon: "pi pi-list", rota: "/servicos", admin: true },
+  // No celular, Serviços fica no menu do usuário para a barra inferior não passar de seis itens
+  { label: "Serviços", curto: "Serviços", icon: "pi pi-list", rota: "/servicos", admin: true, somenteComputador: true },
   { label: "Remuneração", curto: "Pagar", icon: "pi pi-wallet", rota: "/remuneracao", admin: true },
+  { label: "Caixa", curto: "Caixa", icon: "pi pi-chart-bar", rota: "/caixa", admin: true },
+  { label: "Relatórios", curto: "Relatórios", icon: "pi pi-chart-line", rota: "/relatorios", admin: true, somenteComputador: true },
   { label: "Meus ganhos", curto: "Ganhos", icon: "pi pi-wallet", rota: "/meus-ganhos", admin: false, somenteFuncionario: true },
 ];
 
@@ -25,7 +28,9 @@ export default function Menu() {
   const { pathname } = useLocation();
   const mobile = useIsMobile();
   const { administrador } = useAutenticacao();
-  const paginas = PAGINAS.filter((p) => (administrador ? !p.somenteFuncionario : !p.admin));
+  const paginas = PAGINAS.filter(
+    (p) => (administrador ? !p.somenteFuncionario : !p.admin) && !(mobile && p.somenteComputador)
+  );
   const [tema, setTema] = useState<Tema>(temaAtual);
 
   const trocarTema = async (escuro: boolean) => {

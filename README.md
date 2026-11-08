@@ -108,6 +108,8 @@ services    -> Configuração do acesso à API (axios)
 * **Folga semanal:** marcada no cadastro de cada funcionário
 * **Bloqueios:** almoço, compromisso, férias ou feriado, de um profissional ou do salão inteiro, criados pelo botão "Bloquear" da agenda; o funcionário pode bloquear só a própria agenda
 * **Vales (adiantamentos):** registrados na aba "Vales" da Remuneração e descontados automaticamente no próximo pagamento do funcionário; se o vale passar do valor do dia, o restante continua em aberto. Estornar o pagamento devolve os vales
+* **Caixa:** entradas (atendimentos recebidos, por forma de pagamento), saídas (despesas, vales e pagamentos aos funcionários) e saldo, por dia ou por mês, com extrato de todas as movimentações. As despesas são lançadas na própria tela do Caixa
+* **Relatórios:** faturamento do período (com gráfico por dia ou por mês), serviços mais vendidos, produção por profissional, melhores clientes, clientes que não voltam há 30/60/90 dias e aniversariantes do mês (os dois últimos com botão de WhatsApp com mensagem pronta)
 * **Comanda:** ao concluir, abre a comanda da cliente no dia com todos os serviços pendentes; dá para ajustar valores (desconto) e receber tudo com uma forma de pagamento
 
 ### Clientes
@@ -202,6 +204,29 @@ A aplicação estará disponível em: http://localhost:3000
 
 ---
 
+## Instalação no salão
+
+Para o uso no dia a dia não é preciso abrir terminal: a API passa a entregar também as telas, numa porta só (5100), e inicia sozinha junto com o Windows.
+
+Abra o PowerShell **como administrador** na pasta do projeto e rode:
+
+```
+powershell -ExecutionPolicy Bypass -File .\publicar.ps1
+powershell -ExecutionPolicy Bypass -File .\instalar.ps1
+```
+
+* `publicar.ps1` gera as telas, publica a API em `C:\GestaoSalao` (com o .NET embutido, o computador não precisa ter nada instalado) e, na primeira vez, pergunta se deve levar os dados do banco de desenvolvimento
+* `instalar.ps1` cria a tarefa agendada **GestaoSalao** (inicia com o Windows, mesmo sem ninguém entrar, e reinicia se cair), libera a porta 5100 no firewall da rede privada e mostra os endereços de acesso
+* Para **atualizar** depois de uma mudança no código: rode só o `publicar.ps1` de novo (ele para o sistema, troca os arquivos e inicia de novo; as migrations são aplicadas sozinhas)
+* `desinstalar.ps1` remove o início automático e a regra do firewall, sem apagar os dados
+* Para instalar em outra pasta: `.\publicar.ps1 -Destino D:\Salao` e `.\instalar.ps1 -Pasta D:\Salao`
+
+Depois de instalado, o sistema fica em `http://localhost:5100` no computador e `http://IP-DO-COMPUTADOR:5100` nos celulares da mesma rede. O banco (`gestaosalao.db`) e os backups ficam na pasta de instalação.
+
+O guia de uso para o salão está no [MANUAL.md](MANUAL.md).
+
+---
+
 ## Endpoints principais
 
 | Método | Rota | Descrição |
@@ -234,6 +259,12 @@ A aplicação estará disponível em: http://localhost:3000
 | GET/POST | /api/vales | Listar / registrar vales (administrador) |
 | DELETE | /api/vales/{id} | Excluir vale ainda não descontado |
 | GET | /api/vales/meus | Vales do funcionário logado |
+| GET | /api/caixa | Resumo do caixa (`?inicio=&fim=`) com extrato (administrador) |
+| GET/PUT/DELETE | /api/despesas/{id} | Consultar / atualizar / excluir despesa (administrador) |
+| POST | /api/despesas | Registrar despesa (administrador) |
+| GET | /api/relatorios | Relatório do período (`?inicio=&fim=`, até um ano) |
+| GET | /api/relatorios/clientes-sumidos | Clientes sem visita há mais de `?dias=` dias e sem horário marcado |
+| GET | /api/relatorios/aniversariantes | Aniversariantes do mês (`?mes=`) |
 | GET | /api/auth/situacao | Indica se é o primeiro acesso (sem usuários) |
 | POST | /api/auth/primeiro-acesso | Cria o primeiro administrador |
 | POST | /api/auth/login | Entra no sistema (retorna o token) |
@@ -264,7 +295,7 @@ dotnet tool install --global dotnet-ef
 
 ### Backup
 
-* A API cria uma cópia do banco por dia na pasta `GestaoSalaoApi/GestaoSalaoApi/Backups` e guarda os últimos 30 dias
+* A API cria uma cópia do banco por dia na pasta `Backups`, ao lado do banco (em desenvolvimento, `GestaoSalaoApi/GestaoSalaoApi/Backups`; instalado, `C:\GestaoSalao\Backups`), e guarda os últimos 30 dias
 * O botão de download no menu baixa uma cópia na hora
 * Para restaurar: pare a API e substitua o `gestaosalao.db` pela cópia desejada (renomeando para `gestaosalao.db`)
 
@@ -275,7 +306,7 @@ dotnet tool install --global dotnet-ef
 * O banco SQLite (`gestaosalao.db`) é criado na primeira execução, já com alguns serviços cadastrados
 * A estrutura do banco é controlada por Migrations do Entity Framework (pasta `Migrations`), aplicadas automaticamente ao iniciar a API
 * A API usa a porta 5100 (configurada em `Properties/launchSettings.json`)
-* Para usar no celular (mesma rede Wi-Fi), abra `http://IP-DO-COMPUTADOR:3000`; a API escuta em todas as interfaces e o front chama a API no mesmo IP. É preciso liberar as portas 3000 e 5100 no Firewall do Windows (rede marcada como Privada)
+* Em desenvolvimento, para usar no celular (mesma rede Wi-Fi), abra `http://IP-DO-COMPUTADOR:3000`; a API escuta em todas as interfaces e o front chama a API no mesmo IP. É preciso liberar as portas 3000 e 5100 no Firewall do Windows (rede marcada como Privada). Instalado, só a porta 5100 é usada
 * O CORS está liberado para facilitar a integração entre frontend e backend
 * As regras de negócio estão centralizadas na camada de serviços
 * Datas e horários são tratados no horário local do salão (sem fuso)

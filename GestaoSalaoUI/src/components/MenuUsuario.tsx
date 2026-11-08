@@ -11,10 +11,12 @@ import { api } from "../services/api";
 import { useAutenticacao } from "../services/autenticacao";
 import { baixarBackup } from "../utilities/backup";
 import { iniciais, mensagemErro } from "../utilities/formatters";
+import useIsMobile from "../hooks/useIsMobile";
 
 export default function MenuUsuario() {
   const { usuario, administrador, sair } = useAutenticacao();
   const navigate = useNavigate();
+  const mobile = useIsMobile();
   const menu = useRef<Menu>(null);
   const toast = useRef<Toast>(null);
 
@@ -67,6 +69,12 @@ export default function MenuUsuario() {
     { label: "Alterar senha", icon: "pi pi-key", command: () => setTrocandoSenha(true) },
     ...(administrador
       ? [
+          ...(mobile
+            ? [
+                { label: "Relatórios", icon: "pi pi-chart-line", command: () => navigate("/relatorios") },
+                { label: "Serviços", icon: "pi pi-list", command: () => navigate("/servicos") },
+              ]
+            : []),
           { label: "Horário e bloqueios", icon: "pi pi-clock", command: () => navigate("/horarios") },
           { label: "Usuários", icon: "pi pi-user-edit", command: () => navigate("/usuarios") },
           { label: "Baixar backup", icon: "pi pi-download", command: backup },

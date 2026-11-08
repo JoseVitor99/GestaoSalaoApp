@@ -125,6 +125,38 @@ namespace GestaoSalaoApi.Migrations
                     b.ToTable("Clientes");
                 });
 
+            modelBuilder.Entity("GestaoSalaoApi.Entidade.Despesa", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("Categoria")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("Data")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("DataRegistro")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Descricao")
+                        .HasMaxLength(200)
+                        .HasColumnType("TEXT");
+
+                    b.Property<int?>("FormaPagamento")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<decimal>("Valor")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Data");
+
+                    b.ToTable("Despesas");
+                });
+
             modelBuilder.Entity("GestaoSalaoApi.Entidade.Funcionario", b =>
                 {
                     b.Property<int>("Id")

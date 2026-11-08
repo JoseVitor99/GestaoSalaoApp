@@ -12,6 +12,8 @@ import Remuneracao from "./pages/Remuneracao";
 import Usuarios from "./pages/Usuarios";
 import MeusGanhos from "./pages/MeusGanhos";
 import Horarios from "./pages/Horarios";
+import Caixa from "./pages/Caixa";
+import Relatorios from "./pages/Relatorios";
 import { useAutenticacao } from "./services/autenticacao";
 
 function App() {
@@ -43,6 +45,8 @@ function App() {
               <Route path="/remuneracao" element={<Remuneracao />} />
               <Route path="/usuarios" element={<Usuarios />} />
               <Route path="/horarios" element={<Horarios />} />
+              <Route path="/caixa" element={<Caixa />} />
+              <Route path="/relatorios" element={<Relatorios />} />
             </>
           ) : (
             <Route path="/meus-ganhos" element={<MeusGanhos />} />

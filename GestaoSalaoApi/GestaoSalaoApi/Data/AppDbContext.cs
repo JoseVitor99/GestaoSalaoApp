@@ -25,6 +25,8 @@ namespace GestaoSalaoApi.Data
 
         public DbSet<Vale> Vales { get; set; }
 
+        public DbSet<Despesa> Despesas { get; set; }
+
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             // Restrict: não deixa apagar cadastro que já tem atendimentos
@@ -90,6 +92,9 @@ namespace GestaoSalaoApi.Data
                 .WithMany()
                 .HasForeignKey(v => v.PagamentoId)
                 .OnDelete(DeleteBehavior.SetNull);
+
+            modelBuilder.Entity<Despesa>()
+                .HasIndex(d => d.Data);
 
             modelBuilder.Entity<HorarioFuncionamento>()
                 .HasIndex(h => h.DiaSemana)

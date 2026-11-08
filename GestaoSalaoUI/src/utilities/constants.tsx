@@ -49,4 +49,12 @@ const DIAS_SEMANA = [
   { value: 0, curto: "Dom", descricao: "Domingo" },
 ];
 
-export { DIAS_SEMANA, NOME_APP, NOME_CLIENTE, PERFIL, PERFIS, STATUS_AGENDAMENTO, FORMA_PAGAMENTO, TIPO_REMUNERACAO, TIPOS_REMUNERACAO };
+const CATEGORIAS_DESPESA = [
+  { value: 1, descricao: "Produtos" },
+  { value: 2, descricao: "Aluguel" },
+  { value: 3, descricao: "Contas (luz, água, internet)" },
+  { value: 4, descricao: "Manutenção" },
+  { value: 5, descricao: "Outros" },
+];
+
+export { CATEGORIAS_DESPESA, DIAS_SEMANA, NOME_APP, NOME_CLIENTE, PERFIL, PERFIS, STATUS_AGENDAMENTO, FORMA_PAGAMENTO, TIPO_REMUNERACAO, TIPOS_REMUNERACAO };

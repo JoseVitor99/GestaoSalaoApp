@@ -23,6 +23,15 @@ namespace GestaoSalaoApi.Services
             _ => forma.ToString() ?? string.Empty
         };
 
+        public static string CategoriaDespesa(CategoriaDespesa categoria) => categoria switch
+        {
+            Entidade.CategoriaDespesa.Produtos => "Produtos",
+            Entidade.CategoriaDespesa.Aluguel => "Aluguel",
+            Entidade.CategoriaDespesa.Contas => "Contas (luz, água, internet)",
+            Entidade.CategoriaDespesa.Manutencao => "Manutenção",
+            _ => "Outros"
+        };
+
         public static string DiaSemana(DayOfWeek dia) => dia switch
         {
             DayOfWeek.Sunday => "domingo",

@@ -15,6 +15,8 @@ builder.Services.AddScoped<CadastroService>();
 builder.Services.AddScoped<AgendaService>();
 builder.Services.AddScoped<AgendamentoService>();
 builder.Services.AddScoped<RemuneracaoService>();
+builder.Services.AddScoped<CaixaService>();
+builder.Services.AddScoped<RelatorioService>();
 builder.Services.AddScoped<UsuarioService>();
 builder.Services.AddSingleton<BackupService>();
 builder.Services.AddHostedService(sp => sp.GetRequiredService<BackupService>());
@@ -37,7 +39,16 @@ builder.Services.AddCors(options =>
 
 var app = builder.Build();
 
+// Instalado no salão, a própria API entrega as telas (pasta wwwroot criada pelo publicar.ps1)
+var temTelas = Directory.Exists(Path.Combine(app.Environment.ContentRootPath, "wwwroot"));
+
 app.UseCors("AllowAll");
+
+if (temTelas)
+{
+    app.UseDefaultFiles();
+    app.UseStaticFiles();
+}
 
 if (app.Environment.IsDevelopment())
 {
@@ -70,6 +81,10 @@ app.Use(async (context, next) =>
 app.UseAuthorization();
 
 app.MapControllers();
+
+// Endereços como /agenda são rotas da tela: devolvem o index.html, sem exigir login
+if (temTelas)
+    app.MapFallbackToFile("index.html").AllowAnonymous();
 
 // Cria ou atualiza o banco de dados pelas migrations
 using (var scope = app.Services.CreateScope())
