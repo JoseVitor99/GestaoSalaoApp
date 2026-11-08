@@ -1,5 +1,7 @@
+using GestaoSalaoApi.Entidade;
 using GestaoSalaoApi.DTO;
 using GestaoSalaoApi.Services;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace GestaoSalaoApi.Controllers
@@ -15,6 +17,7 @@ namespace GestaoSalaoApi.Controllers
             _service = service;
         }
 
+        [Authorize(Roles = Perfis.Administrador)]
         [HttpGet]
         public async Task<IActionResult> Get([FromQuery] DateTime? data)
         {
@@ -22,6 +25,7 @@ namespace GestaoSalaoApi.Controllers
             return Ok(result);
         }
 
+        [Authorize(Roles = Perfis.Administrador)]
         [HttpPost("pagar")]
         public async Task<IActionResult> Pagar(PagarRemuneracaoDTO dto)
         {
@@ -35,6 +39,7 @@ namespace GestaoSalaoApi.Controllers
             }
         }
 
+        [Authorize(Roles = Perfis.Administrador)]
         [HttpDelete("pagamentos/{id}")]
         public async Task<IActionResult> Estornar(int id)
         {
@@ -49,12 +54,40 @@ namespace GestaoSalaoApi.Controllers
             }
         }
 
+        [Authorize(Roles = Perfis.Administrador)]
         [HttpGet("historico")]
         public async Task<IActionResult> Historico(
             [FromQuery] DateTime? inicio,
             [FromQuery] DateTime? fim,
             [FromQuery] int? funcionarioId)
         {
+            var ate = (fim ?? DateTime.Today).Date;
+            var de = (inicio ?? ate.AddDays(-30)).Date;
+
+            if (de > ate)
+                return BadRequest("O período informado é inválido.");
+
+            return Ok(await _service.Historico(de, ate, funcionarioId));
+        }
+
+        [HttpGet("minha")]
+        public async Task<IActionResult> Minha([FromQuery] DateTime? data)
+        {
+            var funcionarioId = User.IdFuncionario();
+            if (funcionarioId == null)
+                return BadRequest("Seu usuário não está vinculado a um funcionário.");
+
+            var dia = await _service.CalcularDia(data ?? DateTime.Today);
+            return Ok(dia.FirstOrDefault(r => r.FuncionarioId == funcionarioId));
+        }
+
+        [HttpGet("minha/historico")]
+        public async Task<IActionResult> MinhaHistorico([FromQuery] DateTime? inicio, [FromQuery] DateTime? fim)
+        {
+            var funcionarioId = User.IdFuncionario();
+            if (funcionarioId == null)
+                return BadRequest("Seu usuário não está vinculado a um funcionário.");
+
             var ate = (fim ?? DateTime.Today).Date;
             var de = (inicio ?? ate.AddDays(-30)).Date;
 

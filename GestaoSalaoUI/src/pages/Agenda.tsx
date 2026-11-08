@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Toast } from "primereact/toast";
 import { Card } from "primereact/card";
 import { useSearchParams } from "react-router-dom";
@@ -11,6 +11,7 @@ import { Dialog } from "primereact/dialog";
 import { ConfirmDialog, confirmDialog } from "primereact/confirmdialog";
 
 import { api } from "../services/api";
+import { useAutenticacao } from "../services/autenticacao";
 import ICliente from "../interfaces/ICliente";
 import IServico from "../interfaces/IServico";
 import IFuncionario from "../interfaces/IFuncionario";
@@ -24,6 +25,7 @@ import { STATUS_AGENDAMENTO } from "../utilities/constants";
 import {
   daApi,
   dataExtenso,
+  formatarTelefone,
   hoje,
   mensagemErro,
   mesmoDia,
@@ -31,7 +33,9 @@ import {
   paraApiData,
   paraApiDataHora,
   somarDias,
+  somenteDigitos,
 } from "../utilities/formatters";
+import InputTelefone from "../components/InputTelefone";
 
 const proximoHorario = () => {
   const d = new Date();
@@ -40,20 +44,40 @@ const proximoHorario = () => {
   return d;
 };
 
+interface ItemForm {
+  chave: number;
+  servicoId: number | null;
+  funcionarioId: number | null;
+  dataHora: Date | null;
+  valor: number | null;
+}
+
+let proximaChave = 1;
+
+const novoItem = (dataHora: Date | null, funcionarioId: number | null = null, servicoId: number | null = null, valor: number | null = null): ItemForm => ({
+  chave: proximaChave++,
+  servicoId,
+  funcionarioId,
+  dataHora,
+  valor,
+});
+
 export default function Agenda() {
   const toast = useRef<Toast>(null);
   const mobile = useIsMobile();
   const [parametros, setParametros] = useSearchParams();
+  const { usuario, administrador } = useAutenticacao();
+
+  // Funcionário só agenda para si mesmo
+  const meuFuncionario = administrador ? null : usuario?.funcionarioId ?? null;
+  const podeAlterar = (a: IAgendamento) => administrador || a.funcionarioId === meuFuncionario;
 
   const [clientes, setClientes] = useState<ICliente[]>([]);
   const [servicos, setServicos] = useState<IServico[]>([]);
   const [funcionarios, setFuncionarios] = useState<IFuncionario[]>([]);
 
   const [clienteId, setClienteId] = useState<number | null>(null);
-  const [servicoId, setServicoId] = useState<number | null>(null);
-  const [funcionarioId, setFuncionarioId] = useState<number | null>(null);
-  const [dataHora, setDataHora] = useState<Date | null>(proximoHorario());
-  const [valor, setValor] = useState<number | null>(null);
+  const [itens, setItens] = useState<ItemForm[]>(() => [novoItem(proximoHorario(), meuFuncionario)]);
   const [observacao, setObservacao] = useState("");
   const [editandoId, setEditandoId] = useState<number | null>(null);
   const [salvando, setSalvando] = useState(false);
@@ -116,20 +140,34 @@ export default function Agenda() {
     if (parametros.has("novo")) setParametros({}, { replace: true });
   }, [parametros, setParametros]);
 
-  const servicoSelecionado = useMemo(() => servicos.find((s) => s.id === servicoId), [servicos, servicoId]);
+  const duracao = (servicoId: number | null) => servicos.find((s) => s.id === servicoId)?.duracaoMinutos ?? 0;
 
-  const escolherServico = (id: number) => {
-    setServicoId(id);
+  const fimDoItem = (item: ItemForm) =>
+    item.dataHora ? new Date(item.dataHora.getTime() + duracao(item.servicoId) * 60000) : null;
+
+  const alterarItem = (chave: number, mudanca: Partial<ItemForm>) =>
+    setItens((lista) => lista.map((i) => (i.chave === chave ? { ...i, ...mudanca } : i)));
+
+  // Ao escolher o serviço, o valor vem da tabela de preços
+  const escolherServico = (chave: number, id: number) => {
     const servico = servicos.find((s) => s.id === id);
-    if (servico) setValor(servico.preco);
+    alterarItem(chave, { servicoId: id, valor: servico?.preco ?? null });
   };
+
+  // O próximo serviço começa quando o anterior termina, com a mesma profissional
+  const adicionarItem = () =>
+    setItens((lista) => {
+      const ultimo = lista[lista.length - 1];
+      return [...lista, novoItem(fimDoItem(ultimo) ?? ultimo.dataHora, ultimo.funcionarioId)];
+    });
+
+  const removerItem = (chave: number) => setItens((lista) => lista.filter((i) => i.chave !== chave));
+
+  const totalItens = itens.reduce((acc, i) => acc + (i.valor ?? 0), 0);
 
   const limparFormulario = () => {
     setClienteId(null);
-    setServicoId(null);
-    setFuncionarioId(null);
-    setDataHora(proximoHorario());
-    setValor(null);
+    setItens([novoItem(proximoHorario(), meuFuncionario)]);
     setObservacao("");
     setEditandoId(null);
   };
@@ -141,31 +179,51 @@ export default function Agenda() {
 
   const submit = async () => {
     if (!clienteId) return aviso("Selecione o cliente.");
-    if (!servicoId) return aviso("Selecione o serviço.");
-    if (!funcionarioId) return aviso("Selecione o profissional.");
-    if (!dataHora) return aviso("Informe a data e o horário.");
-    if (!valor || valor <= 0) return aviso("Informe um valor válido.");
 
-    const corpo = {
-      clienteId,
-      servicoId,
-      funcionarioId,
-      dataHora: paraApiDataHora(dataHora),
-      valor,
-      observacao: observacao.trim() || null,
-    };
+    for (const [n, i] of itens.entries()) {
+      const qual = itens.length > 1 ? ` (serviço ${n + 1})` : "";
+      if (!i.servicoId) return aviso(`Selecione o serviço${qual}.`);
+      if (!i.funcionarioId) return aviso(`Selecione o profissional${qual}.`);
+      if (!i.dataHora) return aviso(`Informe a data e o horário${qual}.`);
+      if (!i.valor || i.valor <= 0) return aviso(`Informe um valor válido${qual}.`);
+    }
+
+    const obs = observacao.trim() || null;
 
     try {
       setSalvando(true);
       if (editandoId) {
-        await api.put(`/agendamentos/${editandoId}`, corpo);
+        const i = itens[0];
+        await api.put(`/agendamentos/${editandoId}`, {
+          clienteId,
+          servicoId: i.servicoId,
+          funcionarioId: i.funcionarioId,
+          dataHora: paraApiDataHora(i.dataHora!),
+          valor: i.valor,
+          observacao: obs,
+        });
       } else {
-        await api.post("/agendamentos", corpo);
+        await api.post("/agendamentos/lote", {
+          clienteId,
+          observacao: obs,
+          itens: itens.map((i) => ({
+            servicoId: i.servicoId,
+            funcionarioId: i.funcionarioId,
+            dataHora: paraApiDataHora(i.dataHora!),
+            valor: i.valor,
+          })),
+        });
       }
 
-      sucesso(`Horário ${editandoId ? "atualizado" : "marcado"} com sucesso!`);
+      sucesso(
+        editandoId
+          ? "Horário atualizado com sucesso!"
+          : itens.length > 1
+          ? `${itens.length} serviços marcados com sucesso!`
+          : "Horário marcado com sucesso!"
+      );
 
-      const diaSalvo = new Date(dataHora);
+      const diaSalvo = new Date(itens[0].dataHora!);
       diaSalvo.setHours(0, 0, 0, 0);
       limparFormulario();
       setFormAberto(false);
@@ -181,10 +239,7 @@ export default function Agenda() {
   const editar = (a: IAgendamento) => {
     setEditandoId(a.id);
     setClienteId(a.clienteId);
-    setServicoId(a.servicoId);
-    setFuncionarioId(a.funcionarioId);
-    setDataHora(daApi(a.dataHora));
-    setValor(a.valor);
+    setItens([novoItem(daApi(a.dataHora), a.funcionarioId, a.servicoId, a.valor)]);
     setObservacao(a.observacao ?? "");
     setFormAberto(true);
     if (!mobile) window.scrollTo({ top: 0, behavior: "smooth" });
@@ -233,7 +288,7 @@ export default function Agenda() {
 
   const salvarNovoCliente = async () => {
     if (!novoClienteNome.trim()) return aviso("Informe o nome do cliente.");
-    if (!novoClienteTelefone.trim()) return aviso("Informe o telefone do cliente.");
+    if (somenteDigitos(novoClienteTelefone).length < 10) return aviso("Informe o telefone do cliente com DDD.");
 
     try {
       const response = await api.post("/clientes", { nome: novoClienteNome, telefone: novoClienteTelefone });
@@ -292,7 +347,7 @@ export default function Agenda() {
             itemTemplate={(c: ICliente) => (
               <div>
                 <div>{c.nome}</div>
-                <div className="texto-pequeno">{c.telefone}</div>
+                <div className="texto-pequeno">{formatarTelefone(c.telefone)}</div>
               </div>
             )}
             className="w-full"
@@ -308,81 +363,101 @@ export default function Agenda() {
         </div>
       </div>
 
-      <div className="field mb-3">
-        <label className="block mb-2">Serviço</label>
-        <Dropdown
-          value={servicoId}
-          onChange={(e) => escolherServico(e.value)}
-          options={servicos}
-          optionLabel="descricao"
-          optionValue="id"
-          itemTemplate={servicoTemplate}
-          valueTemplate={() => servicoTemplate(servicoSelecionado)}
-          placeholder="Selecione o serviço"
-          emptyMessage="Cadastre os serviços primeiro"
-          className="w-full"
-        />
-      </div>
-
-      <div className="field mb-3">
-        <label className="block mb-2">Profissional</label>
-        <Dropdown
-          value={funcionarioId}
-          onChange={(e) => setFuncionarioId(e.value)}
-          options={funcionarios}
-          optionLabel="nome"
-          optionValue="id"
-          itemTemplate={(f: IFuncionario) => (
-            <div>
-              <div>{f.nome}</div>
-              {f.funcao && <div className="texto-pequeno">{f.funcao}</div>}
+      <label className="block mb-2">{itens.length > 1 ? "Serviços" : "Serviço"}</label>
+      {itens.map((item, n) => {
+        const servico = servicos.find((s) => s.id === item.servicoId);
+        const fim = fimDoItem(item);
+        return (
+          <div key={item.chave} className="item-servico mb-2">
+            {itens.length > 1 && (
+              <div className="flex justify-content-between align-items-center mb-2">
+                <span className="font-semibold">Serviço {n + 1}</span>
+                <Button
+                  icon="pi pi-times"
+                  className="p-button-text p-button-danger p-button-sm p-button-rounded"
+                  aria-label="Remover serviço"
+                  onClick={() => removerItem(item.chave)}
+                />
+              </div>
+            )}
+            <Dropdown
+              value={item.servicoId}
+              onChange={(e) => escolherServico(item.chave, e.value)}
+              options={servicos}
+              optionLabel="descricao"
+              optionValue="id"
+              itemTemplate={servicoTemplate}
+              valueTemplate={() => servicoTemplate(servico)}
+              placeholder="Selecione o serviço"
+              emptyMessage="Cadastre os serviços primeiro"
+              className="w-full mb-2"
+            />
+            <Dropdown
+              value={item.funcionarioId}
+              onChange={(e) => alterarItem(item.chave, { funcionarioId: e.value })}
+              options={administrador ? funcionarios : funcionarios.filter((f) => f.id === meuFuncionario)}
+              disabled={!administrador}
+              optionLabel="nome"
+              optionValue="id"
+              itemTemplate={(f: IFuncionario) => (
+                <div>
+                  <div>{f.nome}</div>
+                  {f.funcao && <div className="texto-pequeno">{f.funcao}</div>}
+                </div>
+              )}
+              placeholder="Selecione o profissional"
+              emptyMessage="Cadastre os funcionários primeiro"
+              className="w-full mb-2"
+            />
+            <div className="grid">
+              <div className="col-7 pb-0">
+                <Calendar
+                  value={item.dataHora}
+                  onChange={(e) => alterarItem(item.chave, { dataHora: e.value ?? null })}
+                  showTime
+                  hourFormat="24"
+                  stepMinute={5}
+                  minDate={editandoId ? undefined : hoje()}
+                  dateFormat="dd/mm/yy"
+                  placeholder="Data e hora"
+                  touchUI={mobile}
+                  readOnlyInput={mobile}
+                  className="w-full"
+                />
+              </div>
+              <div className="col-5 pb-0">
+                <InputNumber
+                  value={item.valor}
+                  onValueChange={(e) => alterarItem(item.chave, { valor: e.value ?? null })}
+                  mode="currency"
+                  currency="BRL"
+                  locale="pt-BR"
+                  placeholder="Valor"
+                  className="w-full"
+                  inputClassName="w-full"
+                />
+              </div>
             </div>
-          )}
-          placeholder="Selecione o profissional"
-          emptyMessage="Cadastre os funcionários primeiro"
-          className="w-full"
-        />
-      </div>
+            {servico && fim && (
+              <small className="texto-pequeno block mt-2">
+                <i className="pi pi-clock mr-1" style={{ fontSize: "0.75rem" }} />
+                {servico.duracaoMinutos} min · término às{" "}
+                {fim.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}
+              </small>
+            )}
+          </div>
+        );
+      })}
 
-      <div className="grid">
-        <div className="col-12 field mb-0">
-          <label className="block mb-2">Data e horário</label>
-          <Calendar
-            value={dataHora}
-            onChange={(e) => setDataHora(e.value ?? null)}
-            showTime
-            hourFormat="24"
-            stepMinute={5}
-            minDate={editandoId ? undefined : hoje()}
-            dateFormat="dd/mm/yy"
-            showIcon
-            touchUI={mobile}
-            readOnlyInput={mobile}
-            className="w-full"
-          />
+      {!editandoId && (
+        <Button label="Adicionar outro serviço" icon="pi pi-plus" className="p-button-text p-button-sm" onClick={adicionarItem} />
+      )}
+
+      {itens.length > 1 && (
+        <div className="flex justify-content-between align-items-center mt-2 font-semibold">
+          <span>Total da comanda</span>
+          <span className="text-lg">{moeda(totalItens)}</span>
         </div>
-        <div className="col-12 field mb-0">
-          <label className="block mb-2">Valor</label>
-          <InputNumber
-            value={valor}
-            onValueChange={(e) => setValor(e.value ?? null)}
-            mode="currency"
-            currency="BRL"
-            locale="pt-BR"
-            className="w-full"
-            inputClassName="w-full"
-          />
-        </div>
-      </div>
-      {servicoSelecionado && dataHora && (
-        <small className="texto-pequeno block mb-3">
-          <i className="pi pi-clock mr-1" style={{ fontSize: "0.75rem" }} />
-          Término previsto às{" "}
-          {new Date(dataHora.getTime() + servicoSelecionado.duracaoMinutos * 60000).toLocaleTimeString("pt-BR", {
-            hour: "2-digit",
-            minute: "2-digit",
-          })}
-        </small>
       )}
 
       <div className="field mb-4 mt-3">
@@ -409,7 +484,7 @@ export default function Agenda() {
           />
         )}
         <Button
-          label={editandoId ? "Atualizar" : "Agendar"}
+          label={editandoId ? "Atualizar" : itens.length > 1 ? `Agendar ${itens.length} serviços` : "Agendar"}
           icon={editandoId ? "pi pi-refresh" : "pi pi-calendar-plus"}
           className={`p-button-success ${mobile ? "flex-1" : ""}`}
           loading={salvando}
@@ -488,6 +563,7 @@ export default function Agenda() {
       onCancelar={cancelar}
       onEditar={editar}
       onExcluir={excluir}
+      podeAlterar={podeAlterar}
     />
   );
 
@@ -563,13 +639,7 @@ export default function Agenda() {
         </div>
         <div className="field">
           <label className="block mb-2">Telefone / WhatsApp</label>
-          <InputText
-            value={novoClienteTelefone}
-            onChange={(e) => setNovoClienteTelefone(e.target.value)}
-            className="w-full"
-            placeholder="(00) 00000-0000"
-            inputMode="tel"
-          />
+          <InputTelefone value={novoClienteTelefone} onChange={setNovoClienteTelefone} className="w-full" />
         </div>
         <small className="texto-pequeno">Os demais dados podem ser completados depois na tela de Clientes.</small>
       </Dialog>

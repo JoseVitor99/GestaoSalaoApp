@@ -17,6 +17,8 @@ namespace GestaoSalaoApi.Data
 
         public DbSet<PagamentoDiario> PagamentosDiarios { get; set; }
 
+        public DbSet<Usuario> Usuarios { get; set; }
+
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             // Restrict: não deixa apagar cadastro que já tem atendimentos
@@ -51,6 +53,16 @@ namespace GestaoSalaoApi.Data
             modelBuilder.Entity<PagamentoDiario>()
                 .HasIndex(p => new { p.FuncionarioId, p.Data })
                 .IsUnique();
+
+            modelBuilder.Entity<Usuario>()
+                .HasIndex(u => u.Login)
+                .IsUnique();
+
+            modelBuilder.Entity<Usuario>()
+                .HasOne(u => u.Funcionario)
+                .WithMany()
+                .HasForeignKey(u => u.FuncionarioId)
+                .OnDelete(DeleteBehavior.SetNull);
 
             // Serviços iniciais
             modelBuilder.Entity<Servico>().HasData(

@@ -17,12 +17,25 @@ import IFuncionario from "../interfaces/IFuncionario";
 import { TIPO_REMUNERACAO } from "../utilities/constants";
 import { data, dataExtenso, hoje, hora, mensagemErro, moeda, paraApiData, somarDias } from "../utilities/formatters";
 
+interface Linha extends IRemuneracaoDiaria {
+  trabalhou: boolean;
+}
+
+const recebeDiaria = (l: IRemuneracaoDiaria) => l.tipoRemuneracao !== TIPO_REMUNERACAO.COMISSAO;
+
+// Dia já pago usa os valores gravados; senão recalcula a diária pela marcação "trabalhou"
+const valores = (l: Linha) => {
+  if (l.pago) return { diaria: l.valorDiaria, comissao: l.valorComissao, total: l.valorTotal };
+  const diaria = recebeDiaria(l) && l.trabalhou ? l.valorDiariaConfigurada : 0;
+  return { diaria, comissao: l.valorComissao, total: diaria + l.valorComissao };
+};
+
 export default function Remuneracao() {
   const toast = useRef<Toast>(null);
   const mobile = useIsMobile();
 
   const [dia, setDia] = useState<Date>(hoje());
-  const [linhas, setLinhas] = useState<IRemuneracaoDiaria[]>([]);
+  const [dados, setDados] = useState<IRemuneracaoDiaria[]>([]);
   const [trabalhou, setTrabalhou] = useState<Record<number, boolean>>({});
   const [carregando, setCarregando] = useState(false);
 
@@ -39,7 +52,7 @@ export default function Remuneracao() {
       setCarregando(true);
       const response = await api.get("/remuneracoes", { params: { data: paraApiData(dia) } });
       const lista: IRemuneracaoDiaria[] = response.data || [];
-      setLinhas(lista);
+      setDados(lista);
       setTrabalhou(Object.fromEntries(lista.map((l) => [l.funcionarioId, l.diariaIncluida])));
     } catch (err: any) {
       erro(mensagemErro(err, "Erro ao carregar remuneração."));
@@ -80,16 +93,10 @@ export default function Remuneracao() {
       .catch(() => undefined);
   }, []);
 
-  const recebeDiaria = (l: IRemuneracaoDiaria) => l.tipoRemuneracao !== TIPO_REMUNERACAO.COMISSAO;
-
-  // Dia já pago usa os valores gravados; senão recalcula a diária pela marcação "trabalhou"
-  const valores = useCallback(
-    (l: IRemuneracaoDiaria) => {
-      if (l.pago) return { diaria: l.valorDiaria, comissao: l.valorComissao, total: l.valorTotal };
-      const diaria = recebeDiaria(l) && trabalhou[l.funcionarioId] ? l.valorDiariaConfigurada : 0;
-      return { diaria, comissao: l.valorComissao, total: diaria + l.valorComissao };
-    },
-    [trabalhou]
+  // A tabela só redesenha a linha quando o objeto dela muda, por isso a marcação vai junto com os dados
+  const linhas = useMemo<Linha[]>(
+    () => dados.map((l) => ({ ...l, trabalhou: !!trabalhou[l.funcionarioId] })),
+    [dados, trabalhou]
   );
 
   const totais = useMemo(() => {
@@ -102,9 +109,9 @@ export default function Remuneracao() {
       else pendente += valores(l).total;
     });
     return { pago, pendente, faturado };
-  }, [linhas, valores]);
+  }, [linhas]);
 
-  const pagar = (l: IRemuneracaoDiaria) => {
+  const pagar = (l: Linha) => {
     const v = valores(l);
     confirmDialog({
       header: "Confirmar pagamento",
@@ -127,7 +134,7 @@ export default function Remuneracao() {
           await api.post("/remuneracoes/pagar", {
             funcionarioId: l.funcionarioId,
             data: paraApiData(dia),
-            incluirDiaria: !!trabalhou[l.funcionarioId],
+            incluirDiaria: l.trabalhou,
           });
           sucesso(`Pagamento de ${l.funcionario} registrado.`);
           load();
@@ -182,7 +189,7 @@ export default function Remuneracao() {
             await api.post("/remuneracoes/pagar", {
               funcionarioId: l.funcionarioId,
               data: paraApiData(dia),
-              incluirDiaria: !!trabalhou[l.funcionarioId],
+              incluirDiaria: l.trabalhou,
             });
           } catch {
             erros++;
@@ -196,7 +203,7 @@ export default function Remuneracao() {
     });
   };
 
-  const funcionarioTemplate = (l: IRemuneracaoDiaria) => (
+  const funcionarioTemplate = (l: Linha) => (
     <div>
       <div className="font-medium">{l.funcionario}</div>
       <div className="texto-pequeno">
@@ -207,18 +214,18 @@ export default function Remuneracao() {
     </div>
   );
 
-  const atendimentosTemplate = (l: IRemuneracaoDiaria) => (
+  const atendimentosTemplate = (l: Linha) => (
     <div>
       <div>{l.quantidadeAtendimentos}</div>
       <div className="texto-pequeno">{moeda(l.totalAtendimentos)}</div>
     </div>
   );
 
-  const trabalhouTemplate = (l: IRemuneracaoDiaria) => {
+  const trabalhouTemplate = (l: Linha) => {
     if (!recebeDiaria(l)) return <span className="texto-pequeno">—</span>;
     return (
       <Checkbox
-        checked={!!trabalhou[l.funcionarioId]}
+        checked={l.trabalhou}
         disabled={l.pago}
         onChange={(e) => setTrabalhou((t) => ({ ...t, [l.funcionarioId]: !!e.checked }))}
         tooltip="Marque se trabalhou no dia (soma a diária)"
@@ -227,7 +234,7 @@ export default function Remuneracao() {
     );
   };
 
-  const situacaoTemplate = (l: IRemuneracaoDiaria) =>
+  const situacaoTemplate = (l: Linha) =>
     l.pago ? (
       <div>
         <Tag value="Pago" severity="success" icon="pi pi-check" rounded />
@@ -237,7 +244,7 @@ export default function Remuneracao() {
       <Tag value="Pendente" severity="warning" icon="pi pi-clock" rounded />
     );
 
-  const acoesTemplate = (l: IRemuneracaoDiaria) =>
+  const acoesTemplate = (l: Linha) =>
     l.pago ? (
       <Button
         label="Estornar"
@@ -341,7 +348,7 @@ export default function Remuneracao() {
             {recebeDiaria(l) && !l.pago && (
               <label className="flex align-items-center gap-2 mt-3">
                 <Checkbox
-                  checked={!!trabalhou[l.funcionarioId]}
+                  checked={l.trabalhou}
                   onChange={(e) => setTrabalhou((t) => ({ ...t, [l.funcionarioId]: !!e.checked }))}
                 />
                 Trabalhou neste dia (soma a diária)
@@ -477,9 +484,9 @@ export default function Remuneracao() {
               <Column header="Funcionário" body={funcionarioTemplate} />
               <Column header="Atendimentos" body={atendimentosTemplate} />
               <Column header="Trabalhou" body={trabalhouTemplate} style={{ width: "6rem" }} />
-              <Column header="Diária" body={(l: IRemuneracaoDiaria) => moeda(valores(l).diaria)} />
-              <Column header="Comissão" body={(l: IRemuneracaoDiaria) => moeda(valores(l).comissao)} />
-              <Column header="Total" body={(l: IRemuneracaoDiaria) => <span className="font-bold">{moeda(valores(l).total)}</span>} />
+              <Column header="Diária" style={{ width: "10rem" }} body={(l: Linha) => moeda(valores(l).diaria)} />
+              <Column header="Comissão" style={{ width: "10rem" }} body={(l: Linha) => moeda(valores(l).comissao)} />
+              <Column header="Total" style={{ width: "10rem" }} body={(l: Linha) => <span className="font-bold">{moeda(valores(l).total)}</span>} />
               <Column header="Situação" body={situacaoTemplate} />
               <Column body={acoesTemplate} style={{ width: "8rem" }} />
             </DataTable>

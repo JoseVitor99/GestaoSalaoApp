@@ -17,6 +17,7 @@ export default defineConfig({
     rollupOptions: {
       output: {
         manualChunks(id) {
+          if (id.includes("primereact/resources/themes")) return;
           if (id.includes("node_modules/primereact")) return "primereact";
           if (id.includes("node_modules")) return "vendor";
         },

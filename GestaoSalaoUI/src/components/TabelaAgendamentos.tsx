@@ -6,7 +6,7 @@ import { ProgressSpinner } from "primereact/progressspinner";
 import IAgendamento from "../interfaces/IAgendamento";
 import StatusTag from "./StatusTag";
 import { STATUS_AGENDAMENTO } from "../utilities/constants";
-import { hora, linkTelefone, linkWhatsApp, moeda } from "../utilities/formatters";
+import { formatarTelefone, hora, linkTelefone, linkWhatsApp, moeda } from "../utilities/formatters";
 import useIsMobile from "../hooks/useIsMobile";
 
 interface Props {
@@ -17,6 +17,7 @@ interface Props {
   onEditar?: (a: IAgendamento) => void;
   onExcluir?: (a: IAgendamento) => void;
   mensagemVazia?: string;
+  podeAlterar?: (a: IAgendamento) => boolean;
 }
 
 export default function TabelaAgendamentos({
@@ -27,6 +28,7 @@ export default function TabelaAgendamentos({
   onEditar,
   onExcluir,
   mensagemVazia = "Nenhum horário marcado para este dia.",
+  podeAlterar = () => true,
 }: Props) {
   const mobile = useIsMobile();
 
@@ -42,7 +44,7 @@ export default function TabelaAgendamentos({
       <div className="font-medium">{a.cliente}</div>
       <div className="texto-pequeno white-space-nowrap">
         <i className="pi pi-phone mr-1" style={{ fontSize: "0.7rem" }} />
-        {a.clienteTelefone}
+        {formatarTelefone(a.clienteTelefone)}
       </div>
       {a.observacao && <div className="texto-pequeno font-italic mt-1">“{a.observacao}”</div>}
     </div>
@@ -66,6 +68,7 @@ export default function TabelaAgendamentos({
   );
 
   const acoesTemplate = (a: IAgendamento) => {
+    if (!podeAlterar(a)) return null;
     const pendente = a.status === STATUS_AGENDAMENTO.AGENDADO;
 
     return (
@@ -155,7 +158,7 @@ export default function TabelaAgendamentos({
                   <div className="flex justify-content-between align-items-end mt-2">
                     <a href={linkTelefone(a.clienteTelefone)} className="texto-pequeno no-underline">
                       <i className="pi pi-phone mr-1" style={{ fontSize: "0.7rem" }} />
-                      {a.clienteTelefone}
+                      {formatarTelefone(a.clienteTelefone)}
                     </a>
                     <div className="text-right">
                       <div className="font-bold">{moeda(a.valor)}</div>
@@ -166,7 +169,7 @@ export default function TabelaAgendamentos({
                 </div>
               </div>
 
-              {pendente && (
+              {pendente && podeAlterar(a) && (
                 <div className="item-acoes">
                   <Button label="Concluir" icon="pi pi-check" className="p-button-success" onClick={() => onConcluir(a)} />
                   <Button
@@ -182,7 +185,7 @@ export default function TabelaAgendamentos({
                 </div>
               )}
 
-              {!pendente && a.status === STATUS_AGENDAMENTO.CANCELADO && onExcluir && (
+              {!pendente && a.status === STATUS_AGENDAMENTO.CANCELADO && onExcluir && podeAlterar(a) && (
                 <div className="item-acoes">
                   <Button label="Excluir" icon="pi pi-trash" className="p-button-text p-button-danger p-button-sm" onClick={() => onExcluir(a)} />
                 </div>

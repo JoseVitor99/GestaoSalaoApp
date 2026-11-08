@@ -39,8 +39,9 @@ namespace GestaoSalaoApi.Services
             return agendamentos.Select(ToDTO).ToList();
         }
 
-        public async Task<AgendamentoDTO> Criar(AgendamentoInputDTO dto)
+        public async Task<AgendamentoDTO> Criar(AgendamentoInputDTO dto, int? somenteFuncionario = null)
         {
+            ConferirResponsavel(dto.FuncionarioId, somenteFuncionario);
             var (_, _, servico) = await ValidarDados(dto, null);
 
             if (dto.DataHora.Date < DateTime.Today)
@@ -64,10 +65,119 @@ namespace GestaoSalaoApi.Services
             return await BuscarDTO(agendamento.Id);
         }
 
-        public async Task<AgendamentoDTO> Editar(int id, AgendamentoInputDTO dto)
+        // Marca vários serviços da mesma cliente de uma vez: ou todos são salvos, ou nenhum
+        public async Task<List<AgendamentoDTO>> CriarLote(AgendamentoLoteDTO dto, int? somenteFuncionario = null)
+        {
+            if (dto.Itens.Count == 0)
+                throw new RegraNegocioException("Adicione pelo menos um serviço.");
+
+            var novos = new List<Agendamento>();
+
+            foreach (var item in dto.Itens)
+            {
+                ConferirResponsavel(item.FuncionarioId, somenteFuncionario);
+
+                var entrada = new AgendamentoInputDTO
+                {
+                    ClienteId = dto.ClienteId,
+                    FuncionarioId = item.FuncionarioId,
+                    ServicoId = item.ServicoId,
+                    DataHora = item.DataHora,
+                    Valor = item.Valor,
+                    Observacao = dto.Observacao
+                };
+
+                var (_, funcionario, servico) = await ValidarDados(entrada, null);
+
+                if (item.DataHora.Date < DateTime.Today)
+                    throw new RegraNegocioException("Não é possível agendar em uma data que já passou.");
+
+                var inicio = SemSegundos(item.DataHora);
+                var fim = inicio.AddMinutes(servico.DuracaoMinutos);
+
+                var choque = novos.FirstOrDefault(n =>
+                    n.FuncionarioId == item.FuncionarioId &&
+                    inicio < n.DataHora.AddMinutes(n.DuracaoMinutos) &&
+                    n.DataHora < fim);
+
+                if (choque != null)
+                    throw new RegraNegocioException(
+                        $"{funcionario.Nome} ficou com dois serviços no mesmo horário ({choque.DataHora:HH:mm} e {inicio:HH:mm}). Ajuste os horários.");
+
+                novos.Add(new Agendamento
+                {
+                    ClienteId = dto.ClienteId,
+                    FuncionarioId = item.FuncionarioId,
+                    ServicoId = item.ServicoId,
+                    DataHora = inicio,
+                    DuracaoMinutos = servico.DuracaoMinutos,
+                    Valor = item.Valor ?? servico.Preco,
+                    Status = StatusAgendamento.Agendado,
+                    Observacao = dto.Observacao?.Trim()
+                });
+            }
+
+            _context.Agendamentos.AddRange(novos);
+            await _context.SaveChangesAsync();
+
+            var ids = novos.Select(n => n.Id).ToList();
+            var salvos = await Consulta().Where(a => ids.Contains(a.Id)).OrderBy(a => a.DataHora).ToListAsync();
+            return salvos.Select(ToDTO).ToList();
+        }
+
+        // Conclui de uma vez os serviços da comanda da cliente, com uma única forma de pagamento
+        public async Task<List<AgendamentoDTO>> FecharComanda(FecharComandaDTO dto, int? somenteFuncionario = null)
+        {
+            if (dto.Itens.Count == 0)
+                throw new RegraNegocioException("Selecione pelo menos um serviço da comanda.");
+
+            if (!Enum.IsDefined(typeof(FormaPagamento), dto.FormaPagamento))
+                throw new RegraNegocioException("Informe a forma de pagamento.");
+
+            var ids = dto.Itens.Select(i => i.AgendamentoId).Distinct().ToList();
+            var agendamentos = await _context.Agendamentos.Where(a => ids.Contains(a.Id)).ToListAsync();
+
+            if (agendamentos.Count != ids.Count)
+                throw new RegraNegocioException("Algum serviço da comanda não foi encontrado.");
+
+            if (agendamentos.Select(a => a.ClienteId).Distinct().Count() > 1)
+                throw new RegraNegocioException("A comanda só pode ter serviços da mesma cliente.");
+
+            foreach (var agendamento in agendamentos)
+                ConferirResponsavel(agendamento.FuncionarioId, somenteFuncionario);
+
+            foreach (var agendamento in agendamentos)
+            {
+                if (agendamento.Status != StatusAgendamento.Agendado)
+                    throw new RegraNegocioException("A comanda tem um serviço que não está mais pendente. Atualize a tela.");
+
+                if (agendamento.DataHora.Date > DateTime.Today)
+                    throw new RegraNegocioException("Não é possível concluir um atendimento de data futura.");
+
+                var valor = dto.Itens.First(i => i.AgendamentoId == agendamento.Id).Valor ?? agendamento.Valor;
+                if (valor <= 0)
+                    throw new RegraNegocioException("O valor de cada serviço deve ser maior que zero.");
+
+                await ValidarDiaNaoPago(agendamento.FuncionarioId, agendamento.DataHora);
+
+                agendamento.Status = StatusAgendamento.Concluido;
+                agendamento.FormaPagamento = (FormaPagamento)dto.FormaPagamento;
+                agendamento.Valor = valor;
+            }
+
+            await _context.SaveChangesAsync();
+
+            var concluidos = await Consulta().Where(a => ids.Contains(a.Id)).OrderBy(a => a.DataHora).ToListAsync();
+            return concluidos.Select(ToDTO).ToList();
+        }
+
+        public async Task<AgendamentoDTO> Editar(int id, AgendamentoInputDTO dto, int? somenteFuncionario = null)
         {
             var agendamento = await _context.Agendamentos.FindAsync(id)
                 ?? throw new RegraNegocioException("Agendamento não encontrado.");
+
+            ConferirResponsavel(agendamento.FuncionarioId, somenteFuncionario);
+            ConferirResponsavel(dto.FuncionarioId, somenteFuncionario);
 
             if (agendamento.Status != StatusAgendamento.Agendado)
                 throw new RegraNegocioException("Somente agendamentos pendentes podem ser alterados.");
@@ -93,10 +203,12 @@ namespace GestaoSalaoApi.Services
             return await BuscarDTO(id);
         }
 
-        public async Task<AgendamentoDTO> Concluir(int id, ConcluirAgendamentoDTO dto)
+        public async Task<AgendamentoDTO> Concluir(int id, ConcluirAgendamentoDTO dto, int? somenteFuncionario = null)
         {
             var agendamento = await _context.Agendamentos.FindAsync(id)
                 ?? throw new RegraNegocioException("Agendamento não encontrado.");
+
+            ConferirResponsavel(agendamento.FuncionarioId, somenteFuncionario);
 
             if (agendamento.Status != StatusAgendamento.Agendado)
                 throw new RegraNegocioException("Este agendamento não está pendente.");
@@ -121,10 +233,12 @@ namespace GestaoSalaoApi.Services
             return await BuscarDTO(id);
         }
 
-        public async Task<AgendamentoDTO> Cancelar(int id)
+        public async Task<AgendamentoDTO> Cancelar(int id, int? somenteFuncionario = null)
         {
             var agendamento = await _context.Agendamentos.FindAsync(id)
                 ?? throw new RegraNegocioException("Agendamento não encontrado.");
+
+            ConferirResponsavel(agendamento.FuncionarioId, somenteFuncionario);
 
             if (agendamento.Status != StatusAgendamento.Agendado)
                 throw new RegraNegocioException("Somente agendamentos pendentes podem ser cancelados.");
@@ -135,10 +249,12 @@ namespace GestaoSalaoApi.Services
             return await BuscarDTO(id);
         }
 
-        public async Task Excluir(int id)
+        public async Task Excluir(int id, int? somenteFuncionario = null)
         {
             var agendamento = await _context.Agendamentos.FindAsync(id)
                 ?? throw new RegraNegocioException("Agendamento não encontrado.");
+
+            ConferirResponsavel(agendamento.FuncionarioId, somenteFuncionario);
 
             if (agendamento.Status == StatusAgendamento.Concluido)
                 throw new RegraNegocioException("Atendimentos concluídos não podem ser excluídos.");
@@ -231,6 +347,13 @@ namespace GestaoSalaoApi.Services
             }
 
             return (cliente, funcionario, servico);
+        }
+
+        // Funcionário só mexe nos próprios atendimentos; o administrador (null) mexe em todos
+        private static void ConferirResponsavel(int funcionarioId, int? somenteFuncionario)
+        {
+            if (somenteFuncionario.HasValue && funcionarioId != somenteFuncionario.Value)
+                throw new RegraNegocioException("Você só pode agendar e alterar os seus próprios atendimentos.");
         }
 
         private async Task ValidarDiaNaoPago(int funcionarioId, DateTime dataHora)

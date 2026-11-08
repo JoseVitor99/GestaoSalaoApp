@@ -1,6 +1,7 @@
 using GestaoSalaoApi.Data;
 using GestaoSalaoApi.Entidade;
 using GestaoSalaoApi.Services;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
@@ -29,7 +30,9 @@ namespace GestaoSalaoApi.Controllers
             if (!string.IsNullOrWhiteSpace(busca))
             {
                 var termo = $"%{busca.Trim()}%";
-                query = query.Where(c => EF.Functions.Like(c.Nome!, termo) || EF.Functions.Like(c.Telefone!, termo));
+                var digitos = new string(busca.Where(char.IsDigit).ToArray());
+                var termoTelefone = digitos.Length > 0 ? $"%{digitos}%" : termo;
+                query = query.Where(c => EF.Functions.Like(c.Nome!, termo) || EF.Functions.Like(c.Telefone!, termoTelefone));
             }
 
             var clientes = await query.OrderBy(c => c.Nome).ToListAsync();
@@ -93,6 +96,7 @@ namespace GestaoSalaoApi.Controllers
             return Ok(existente);
         }
 
+        [Authorize(Roles = Perfis.Administrador)]
         [HttpDelete("{id}")]
         public async Task<IActionResult> Delete(int id)
         {

@@ -2,6 +2,7 @@ using GestaoSalaoApi.Data;
 using GestaoSalaoApi.DTO;
 using GestaoSalaoApi.Entidade;
 using GestaoSalaoApi.Services;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
@@ -9,6 +10,7 @@ namespace GestaoSalaoApi.Controllers
 {
     [ApiController]
     [Route("api/painel")]
+    [Authorize(Roles = Perfis.Administrador)]
     public class PainelController : ControllerBase
     {
         private readonly AppDbContext _context;

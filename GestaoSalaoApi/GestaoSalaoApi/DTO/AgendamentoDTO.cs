@@ -12,6 +12,33 @@ namespace GestaoSalaoApi.DTO
         public string? Observacao { get; set; }
     }
 
+    public class AgendamentoLoteDTO
+    {
+        public int ClienteId { get; set; }
+        public string? Observacao { get; set; }
+        public List<ItemAgendamentoDTO> Itens { get; set; } = new();
+    }
+
+    public class ItemAgendamentoDTO
+    {
+        public int ServicoId { get; set; }
+        public int FuncionarioId { get; set; }
+        public DateTime DataHora { get; set; }
+        public decimal? Valor { get; set; }
+    }
+
+    public class FecharComandaDTO
+    {
+        public int FormaPagamento { get; set; }
+        public List<ItemComandaDTO> Itens { get; set; } = new();
+    }
+
+    public class ItemComandaDTO
+    {
+        public int AgendamentoId { get; set; }
+        public decimal? Valor { get; set; }
+    }
+
     public class ConcluirAgendamentoDTO
     {
         public int FormaPagamento { get; set; }

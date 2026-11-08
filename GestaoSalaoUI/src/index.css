@@ -1,16 +1,16 @@
-/* O PrimeFlex 4 usa variáveis --p-*, que o tema lara não define */
+/* Variáveis --p-* do PrimeFlex 4; a escala de cinza é fixa porque ele escolhe o tom pelo color-scheme do tema */
 :root {
   --p-primary-color: var(--primary-color);
   --p-primary-contrast-color: var(--primary-color-text);
   --p-content-border-radius: var(--border-radius);
-  --p-surface-0: var(--surface-0);
-  --p-surface-50: var(--surface-50);
-  --p-surface-100: var(--surface-100);
-  --p-surface-200: var(--surface-200);
-  --p-surface-300: var(--surface-300);
-  --p-surface-500: var(--surface-500);
-  --p-surface-700: var(--surface-700);
-  --p-surface-900: var(--surface-900);
+  --p-surface-0: #ffffff;
+  --p-surface-50: #f9fafb;
+  --p-surface-100: #f3f4f6;
+  --p-surface-200: #e5e7eb;
+  --p-surface-300: #d1d5db;
+  --p-surface-500: #6b7280;
+  --p-surface-700: #374151;
+  --p-surface-900: #1f2937;
   --p-green-500: var(--green-500);
   --p-green-600: var(--green-600);
   --p-orange-500: var(--orange-500);
@@ -104,13 +104,16 @@ body {
   border-bottom: 1px solid var(--surface-border);
 }
 
-.barra-topo-pagina {
-  font-weight: 600;
+.seletor-tema {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  cursor: pointer;
+  color: var(--text-color-secondary);
+}
+
+.seletor-tema .pi.ativo {
   color: var(--primary-color);
-  background: var(--highlight-bg);
-  padding: 0.3rem 0.8rem;
-  border-radius: 1rem;
-  font-size: 0.85rem;
 }
 
 .nav-inferior {
@@ -358,4 +361,43 @@ body {
   .p-tabview .p-tabview-nav {
     background: transparent;
   }
+}
+
+@media (max-width: 360px) {
+  .barra-topo-mobile .seletor-tema .pi {
+    display: none;
+  }
+}
+
+.tela-login {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  background: radial-gradient(circle at top, var(--highlight-bg), var(--surface-ground) 60%);
+}
+
+.cartao-login {
+  width: 100%;
+  max-width: 24rem;
+  padding: 2rem 1.75rem;
+  border-radius: 1.25rem;
+  background: var(--surface-card);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+}
+
+.botao-usuario.p-button {
+  width: 2.5rem;
+  height: 2.5rem;
+  padding: 0;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 0.85rem;
+}
+
+.item-servico {
+  border: 1px solid var(--surface-border);
+  border-radius: var(--border-radius);
+  padding: 0.75rem;
 }

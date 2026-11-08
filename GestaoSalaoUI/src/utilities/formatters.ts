@@ -37,6 +37,27 @@ export const hoje = () => {
   return d;
 };
 
+export const somenteDigitos = (valor: string | null | undefined) => (valor ?? "").replace(/\D/g, "").slice(0, 11);
+
+// Máscara aplicada enquanto digita: (XX) X XXXX-XXXX, ou (XX) XXXX-XXXX para fixo
+export const mascaraTelefone = (valor: string | null | undefined) => {
+  const d = somenteDigitos(valor);
+  if (d.length === 0) return "";
+  if (d.length <= 2) return `(${d}`;
+  if (d.length === 10) return `(${d.slice(0, 2)}) ${d.slice(2, 6)}-${d.slice(6)}`;
+
+  const numero = d.slice(2);
+  let texto = `(${d.slice(0, 2)}) ${numero.slice(0, 1)}`;
+  if (numero.length > 1) texto += ` ${numero.slice(1, 5)}`;
+  if (numero.length > 5) texto += `-${numero.slice(5)}`;
+  return texto;
+};
+
+export const formatarTelefone = (valor: string | null | undefined) => {
+  const d = (valor ?? "").replace(/\D/g, "");
+  return d.length === 10 || d.length === 11 ? mascaraTelefone(d) : valor ?? "";
+};
+
 export const linkTelefone = (telefone: string) => `tel:${telefone.replace(/\D/g, "")}`;
 
 // Telefones com DDD recebem o código do Brasil (55)

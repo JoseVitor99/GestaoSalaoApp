@@ -1,6 +1,7 @@
 using GestaoSalaoApi.Data;
 using GestaoSalaoApi.Entidade;
 using GestaoSalaoApi.Services;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
@@ -31,6 +32,7 @@ namespace GestaoSalaoApi.Controllers
             return Ok(funcionarios);
         }
 
+        [Authorize(Roles = Perfis.Administrador)]
         [HttpPost]
         public async Task<IActionResult> Create(Funcionario funcionario)
         {
@@ -50,6 +52,7 @@ namespace GestaoSalaoApi.Controllers
             return Ok(funcionario);
         }
 
+        [Authorize(Roles = Perfis.Administrador)]
         [HttpPut("{id}")]
         public async Task<IActionResult> Update(int id, Funcionario funcionario)
         {
@@ -78,6 +81,7 @@ namespace GestaoSalaoApi.Controllers
             return Ok(existente);
         }
 
+        [Authorize(Roles = Perfis.Administrador)]
         [HttpDelete("{id}")]
         public async Task<IActionResult> Delete(int id)
         {

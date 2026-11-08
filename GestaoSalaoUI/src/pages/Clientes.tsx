@@ -16,15 +16,18 @@ import { api } from "../services/api";
 import FormularioResponsivo from "../components/FormularioResponsivo";
 import BotaoNovo from "../components/BotaoNovo";
 import useIsMobile from "../hooks/useIsMobile";
+import { useAutenticacao } from "../services/autenticacao";
 import ICliente from "../interfaces/ICliente";
 import IAgendamento from "../interfaces/IAgendamento";
 import StatusTag from "../components/StatusTag";
 import { STATUS_AGENDAMENTO } from "../utilities/constants";
-import { daApi, data, hora, iniciais, linkTelefone, linkWhatsApp, mensagemErro, moeda, paraApiData } from "../utilities/formatters";
+import { daApi, data, formatarTelefone, hora, iniciais, linkTelefone, linkWhatsApp, mensagemErro, moeda, paraApiData, somenteDigitos } from "../utilities/formatters";
+import InputTelefone from "../components/InputTelefone";
 
 export default function Clientes() {
   const toast = useRef<Toast>(null);
   const mobile = useIsMobile();
+  const { administrador } = useAutenticacao();
 
   const [formAberto, setFormAberto] = useState(false);
 
@@ -69,7 +72,7 @@ export default function Clientes() {
 
   const submit = async () => {
     if (!nome.trim()) return aviso("Informe o nome.");
-    if (!telefone.trim()) return aviso("Informe o telefone.");
+    if (somenteDigitos(telefone).length < 10) return aviso("Informe o telefone com DDD.");
 
     const corpo = {
       nome,
@@ -154,7 +157,7 @@ export default function Clientes() {
     <div className="flex gap-2">
       <Button icon="pi pi-history" className="p-button-info p-button-sm p-button-outlined" tooltip="Histórico" tooltipOptions={{ position: "top" }} onClick={() => abrirHistorico(c)} />
       <Button icon="pi pi-pencil" className="p-button-warning p-button-sm" onClick={() => editar(c)} />
-      <Button icon="pi pi-trash" className="p-button-danger p-button-sm" onClick={() => remover(c)} />
+      {administrador && <Button icon="pi pi-trash" className="p-button-danger p-button-sm" onClick={() => remover(c)} />}
     </div>
   );
 
@@ -163,8 +166,13 @@ export default function Clientes() {
     .reduce((acc, a) => acc + a.valor, 0);
 
   const termo = busca.trim().toLowerCase();
+  const digitosBusca = somenteDigitos(busca);
   const clientesFiltrados = termo
-    ? clientes.filter((c) => [c.nome, c.telefone, c.email ?? ""].some((v) => v.toLowerCase().includes(termo)))
+    ? clientes.filter(
+        (c) =>
+          [c.nome, c.email ?? ""].some((v) => v.toLowerCase().includes(termo)) ||
+          (digitosBusca.length > 0 && c.telefone.includes(digitosBusca))
+      )
     : clientes;
 
   const formulario = (
@@ -183,14 +191,7 @@ export default function Clientes() {
 
       <div className="field mb-3">
         <label className="block mb-2">Telefone / WhatsApp</label>
-        <InputText
-          value={telefone}
-          onChange={(e) => setTelefone(e.target.value)}
-          className="w-full"
-          placeholder="(00) 00000-0000"
-          maxLength={20}
-          inputMode="tel"
-        />
+        <InputTelefone value={telefone} onChange={setTelefone} className="w-full" />
       </div>
 
       <div className="field mb-3">
@@ -275,7 +276,7 @@ export default function Clientes() {
             <span className="avatar-iniciais">{iniciais(c.nome)}</span>
             <div className="flex-1" style={{ minWidth: 0 }}>
               <div className="item-titulo">{c.nome}</div>
-              <div className="texto-pequeno mt-1">{c.telefone}</div>
+              <div className="texto-pequeno mt-1">{formatarTelefone(c.telefone)}</div>
             </div>
             {aniversarioTemplate(c)}
           </div>
@@ -290,7 +291,9 @@ export default function Clientes() {
             <Button icon="pi pi-phone" className="p-button-outlined" aria-label="Ligar" onClick={() => (window.location.href = linkTelefone(c.telefone))} />
             <Button label="Histórico" icon="pi pi-history" className="p-button-outlined p-button-info" onClick={() => abrirHistorico(c)} />
             <Button icon="pi pi-pencil" className="p-button-outlined p-button-warning" aria-label="Editar" onClick={() => editar(c)} />
-            <Button icon="pi pi-trash" className="p-button-outlined p-button-danger" aria-label="Excluir" onClick={() => remover(c)} />
+            {administrador && (
+              <Button icon="pi pi-trash" className="p-button-outlined p-button-danger" aria-label="Excluir" onClick={() => remover(c)} />
+            )}
           </div>
         </div>
       ))}
@@ -328,16 +331,14 @@ export default function Clientes() {
               </div>
 
               <DataTable
-                value={clientes}
-                globalFilter={busca}
-                globalFilterFields={["nome", "telefone", "email"]}
+                value={clientesFiltrados}
                 paginator
                 rows={10}
                 className="p-datatable-sm"
                 emptyMessage="Nenhum cliente encontrado"
               >
                 <Column field="nome" header="Nome" sortable />
-                <Column field="telefone" header="Telefone" />
+                <Column header="Telefone" body={(c: ICliente) => <span className="white-space-nowrap">{formatarTelefone(c.telefone)}</span>} />
                 <Column header="Aniversário" body={aniversarioTemplate} />
                 <Column header="Ações" body={acoesTemplate} style={{ width: "150px" }} />
               </DataTable>

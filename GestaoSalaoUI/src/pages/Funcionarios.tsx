@@ -17,7 +17,8 @@ import BotaoNovo from "../components/BotaoNovo";
 import useIsMobile from "../hooks/useIsMobile";
 import IFuncionario from "../interfaces/IFuncionario";
 import { TIPO_REMUNERACAO, TIPOS_REMUNERACAO } from "../utilities/constants";
-import { iniciais, mensagemErro, moeda } from "../utilities/formatters";
+import { iniciais, mensagemErro, moeda, somenteDigitos } from "../utilities/formatters";
+import InputTelefone from "../components/InputTelefone";
 
 export default function Funcionarios() {
   const toast = useRef<Toast>(null);
@@ -69,13 +70,14 @@ export default function Funcionarios() {
 
   const submit = async () => {
     if (!nome.trim()) return aviso("Informe o nome.");
+    if (telefone && somenteDigitos(telefone).length < 10) return aviso("Informe o telefone com DDD ou deixe em branco.");
     if (recebeDiaria && (!valorDiaria || valorDiaria <= 0)) return aviso("Informe o valor da diária.");
     if (recebeComissao && (!percentualComissao || percentualComissao <= 0 || percentualComissao > 100))
       return aviso("Informe um percentual de comissão entre 0 e 100.");
 
     const corpo = {
       nome,
-      telefone: telefone.trim() || null,
+      telefone: telefone || null,
       funcao: funcao.trim() || null,
       tipoRemuneracao,
       valorDiaria: recebeDiaria ? valorDiaria : 0,
@@ -189,7 +191,7 @@ export default function Funcionarios() {
 
       <div className="field mb-3">
         <label className="block mb-2">Telefone</label>
-        <InputText value={telefone} onChange={(e) => setTelefone(e.target.value)} className="w-full" placeholder="Opcional" maxLength={20} />
+        <InputTelefone value={telefone} onChange={setTelefone} className="w-full" placeholder="Opcional" />
       </div>
 
       <div className="field mb-3">

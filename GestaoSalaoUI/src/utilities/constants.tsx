@@ -2,6 +2,16 @@ const NOME_APP = "Gestão de Salão";
 
 const NOME_CLIENTE = "CIA da Beleza";
 
+const PERFIL = {
+  ADMINISTRADOR: 1,
+  FUNCIONARIO: 2,
+};
+
+const PERFIS = [
+  { value: PERFIL.ADMINISTRADOR, descricao: "Administrador" },
+  { value: PERFIL.FUNCIONARIO, descricao: "Funcionário" },
+];
+
 const STATUS_AGENDAMENTO = {
   AGENDADO: 1,
   CONCLUIDO: 2,
@@ -27,4 +37,4 @@ const TIPOS_REMUNERACAO = [
   { value: TIPO_REMUNERACAO.DIARIA_MAIS_COMISSAO, descricao: "Diária + comissão" },
 ];
 
-export { NOME_APP, NOME_CLIENTE, STATUS_AGENDAMENTO, FORMA_PAGAMENTO, TIPO_REMUNERACAO, TIPOS_REMUNERACAO };
+export { NOME_APP, NOME_CLIENTE, PERFIL, PERFIS, STATUS_AGENDAMENTO, FORMA_PAGAMENTO, TIPO_REMUNERACAO, TIPOS_REMUNERACAO };

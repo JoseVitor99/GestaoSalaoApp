@@ -78,6 +78,15 @@ services    -> Configuração do acesso à API (axios)
 
 ## Funcionalidades
 
+### Acesso (login)
+
+* Na primeira vez, o sistema pede para criar o usuário administrador
+* **Administrador:** acesso completo (painel, remuneração, cadastros, usuários e backup)
+* **Funcionário:** agenda, clientes e a tela "Meus ganhos" (quanto vai receber no dia e histórico de pagamentos)
+* Usuários são cadastrados pelo administrador no menu do usuário (canto superior direito) → Usuários
+* Cada um pode alterar a própria senha pelo mesmo menu
+* As senhas são gravadas com hash (PBKDF2); a sessão dura 12 horas
+
 ### Painel (tela inicial)
 
 * Faturamento do dia, atendimentos concluídos, pendentes e ticket médio
@@ -87,11 +96,13 @@ services    -> Configuração do acesso à API (axios)
 
 ### Agenda
 
-* Marcar horário: cliente + serviço + profissional + data/hora
+* Marcar horário: cliente + um ou mais serviços, cada um com profissional, data/hora e valor
+* O próximo serviço já sugere o horário em que o anterior termina
 * Valor preenchido automaticamente com o preço do serviço (pode ser alterado)
 * Cadastro rápido de cliente novo sem sair da agenda
 * Navegação por dia e filtro por profissional
-* Remarcar, cancelar, excluir e concluir atendimentos
+* Remarcar, cancelar e excluir atendimentos
+* **Comanda:** ao concluir, abre a comanda da cliente no dia com todos os serviços pendentes; dá para ajustar valores (desconto) e receber tudo com uma forma de pagamento
 
 ### Clientes
 
@@ -207,13 +218,49 @@ A aplicação estará disponível em: http://localhost:3000
 | POST | /api/remuneracoes/pagar | Registrar pagamento do dia |
 | DELETE | /api/remuneracoes/pagamentos/{id} | Estornar pagamento |
 | GET | /api/remuneracoes/historico | Histórico de pagamentos |
+| GET | /api/backup | Baixa uma cópia do banco de dados |
+| POST | /api/agendamentos/lote | Marca vários serviços da mesma cliente de uma vez |
+| POST | /api/agendamentos/fechar-comanda | Conclui os serviços da comanda com uma forma de pagamento |
+| GET | /api/auth/situacao | Indica se é o primeiro acesso (sem usuários) |
+| POST | /api/auth/primeiro-acesso | Cria o primeiro administrador |
+| POST | /api/auth/login | Entra no sistema (retorna o token) |
+| GET | /api/auth/eu | Dados do usuário logado |
+| PUT | /api/auth/minha-senha | Altera a própria senha |
+| GET/POST | /api/usuarios | Listar / cadastrar usuários (administrador) |
+| PUT/DELETE | /api/usuarios/{id} | Atualizar / excluir usuário (administrador) |
+| GET | /api/remuneracoes/minha | Remuneração do dia do funcionário logado |
+| GET | /api/remuneracoes/minha/historico | Pagamentos recebidos pelo funcionário logado |
+
+Todas as rotas exigem login (token no cabeçalho `Authorization: Bearer ...`), exceto as de `situacao`, `primeiro-acesso` e `login`.
+
+---
+
+## Banco de dados
+
+### Migrations
+
+Ao alterar as entidades, gere uma nova migration (com a API parada):
+
+dotnet ef migrations add NomeDaMudanca
+
+Na próxima execução da API ela é aplicada automaticamente, sem perder os dados.
+
+Para instalar a ferramenta `dotnet ef` (uma vez só):
+
+dotnet tool install --global dotnet-ef
+
+### Backup
+
+* A API cria uma cópia do banco por dia na pasta `GestaoSalaoApi/GestaoSalaoApi/Backups` e guarda os últimos 30 dias
+* O botão de download no menu baixa uma cópia na hora
+* Para restaurar: pare a API e substitua o `gestaosalao.db` pela cópia desejada (renomeando para `gestaosalao.db`)
 
 ---
 
 ## Observações
 
-* O banco SQLite (`gestaosalao.db`) é criado automaticamente na primeira execução, já com alguns serviços cadastrados
-* Como o banco é criado com `EnsureCreated`, se a estrutura das entidades mudar, apague o `gestaosalao.db` para recriá-lo (ou passe a usar Migrations)
+* O banco SQLite (`gestaosalao.db`) é criado na primeira execução, já com alguns serviços cadastrados
+* A estrutura do banco é controlada por Migrations do Entity Framework (pasta `Migrations`), aplicadas automaticamente ao iniciar a API
 * A API usa a porta 5100 (configurada em `Properties/launchSettings.json`)
 * Para usar no celular (mesma rede Wi-Fi), abra `http://IP-DO-COMPUTADOR:3000`; a API escuta em todas as interfaces e o front chama a API no mesmo IP. É preciso liberar as portas 3000 e 5100 no Firewall do Windows (rede marcada como Privada)
 * O CORS está liberado para facilitar a integração entre frontend e backend
