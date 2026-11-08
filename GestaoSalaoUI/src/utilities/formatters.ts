@@ -61,10 +61,10 @@ export const formatarTelefone = (valor: string | null | undefined) => {
 export const linkTelefone = (telefone: string) => `tel:${telefone.replace(/\D/g, "")}`;
 
 // Telefones com DDD recebem o código do Brasil (55)
-export const linkWhatsApp = (telefone: string) => {
+export const linkWhatsApp = (telefone: string, mensagem?: string) => {
   let digitos = telefone.replace(/\D/g, "");
   if (digitos.length === 10 || digitos.length === 11) digitos = `55${digitos}`;
-  return `https://wa.me/${digitos}`;
+  return `https://wa.me/${digitos}${mensagem ? `?text=${encodeURIComponent(mensagem)}` : ""}`;
 };
 
 export const iniciais = (nome: string) =>

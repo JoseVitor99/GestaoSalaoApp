@@ -249,6 +249,26 @@ namespace GestaoSalaoApi.Services
             return await BuscarDTO(id);
         }
 
+        // Falta da cliente: só depois que o horário passou, e o horário deixa de contar como pendente
+        public async Task<AgendamentoDTO> MarcarNaoCompareceu(int id, int? somenteFuncionario = null)
+        {
+            var agendamento = await _context.Agendamentos.FindAsync(id)
+                ?? throw new RegraNegocioException("Agendamento não encontrado.");
+
+            ConferirResponsavel(agendamento.FuncionarioId, somenteFuncionario);
+
+            if (agendamento.Status != StatusAgendamento.Agendado)
+                throw new RegraNegocioException("Somente agendamentos pendentes podem ser marcados como falta.");
+
+            if (agendamento.DataHora > DateTime.Now)
+                throw new RegraNegocioException("Só é possível marcar a falta depois do horário agendado.");
+
+            agendamento.Status = StatusAgendamento.NaoCompareceu;
+            await _context.SaveChangesAsync();
+
+            return await BuscarDTO(id);
+        }
+
         public async Task Excluir(int id, int? somenteFuncionario = null)
         {
             var agendamento = await _context.Agendamentos.FindAsync(id)
@@ -330,6 +350,7 @@ namespace GestaoSalaoApi.Services
                 .Include(a => a.Cliente)
                 .Where(a => a.FuncionarioId == dto.FuncionarioId
                          && a.Status != StatusAgendamento.Cancelado
+                         && a.Status != StatusAgendamento.NaoCompareceu
                          && a.DataHora >= dia && a.DataHora < dia.AddDays(1))
                 .ToListAsync();
 

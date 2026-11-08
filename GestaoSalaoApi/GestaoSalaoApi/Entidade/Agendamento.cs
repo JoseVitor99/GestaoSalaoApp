@@ -6,7 +6,8 @@ namespace GestaoSalaoApi.Entidade
     {
         Agendado = 1,
         Concluido = 2,
-        Cancelado = 3
+        Cancelado = 3,
+        NaoCompareceu = 4
     }
 
     public enum FormaPagamento

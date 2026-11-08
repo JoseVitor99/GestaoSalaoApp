@@ -161,6 +161,8 @@ export default function Clientes() {
     </div>
   );
 
+  const faltas = historico.filter((a) => a.status === STATUS_AGENDAMENTO.NAO_COMPARECEU).length;
+
   const totalGasto = historico
     .filter((a) => a.status === STATUS_AGENDAMENTO.CONCLUIDO)
     .reduce((acc, a) => acc + a.valor, 0);
@@ -389,7 +391,12 @@ export default function Clientes() {
             <Column header="Situação" body={(a: IAgendamento) => <StatusTag status={a.status} descricao={a.statusDescricao} />} />
           </DataTable>
         )}
-        <div className="flex justify-content-end mt-3 font-semibold">Total em atendimentos concluídos: {moeda(totalGasto)}</div>
+        <div className="flex flex-wrap justify-content-between gap-2 mt-3 font-semibold">
+          <span className={faltas > 0 ? "text-orange-600" : "texto-pequeno"}>
+            {faltas === 1 ? "1 falta" : `${faltas} faltas`}
+          </span>
+          <span>Total em atendimentos concluídos: {moeda(totalGasto)}</span>
+        </div>
       </Dialog>
     </>
   );

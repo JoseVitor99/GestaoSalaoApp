@@ -37,6 +37,7 @@ export interface IPainelDia {
   pendentes: number;
   concluidos: number;
   cancelados: number;
+  faltas: number;
   faturamento: number;
   previsaoPendentes: number;
   ticketMedio: number;

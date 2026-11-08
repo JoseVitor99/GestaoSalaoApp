@@ -9,6 +9,7 @@ namespace GestaoSalaoApi.Services
             StatusAgendamento.Agendado => "Agendado",
             StatusAgendamento.Concluido => "Concluído",
             StatusAgendamento.Cancelado => "Cancelado",
+            StatusAgendamento.NaoCompareceu => "Não compareceu",
             _ => status.ToString()
         };
 

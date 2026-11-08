@@ -102,6 +102,8 @@ services    -> Configuração do acesso à API (axios)
 * Cadastro rápido de cliente novo sem sair da agenda
 * Navegação por dia e filtro por profissional
 * Remarcar, cancelar e excluir atendimentos
+* **Não compareceu:** depois que o horário passa, dá para marcar a falta da cliente; o histórico da cliente mostra quantas faltas ela tem
+* **Lembretes por WhatsApp:** o botão "Lembretes" da agenda lista as clientes do dia escolhido (amanhã, por padrão) e abre o WhatsApp de cada uma com a mensagem pronta; quem já recebeu fica marcado
 * **Comanda:** ao concluir, abre a comanda da cliente no dia com todos os serviços pendentes; dá para ajustar valores (desconto) e receber tudo com uma forma de pagamento
 
 ### Clientes
@@ -221,6 +223,7 @@ A aplicação estará disponível em: http://localhost:3000
 | GET | /api/backup | Baixa uma cópia do banco de dados |
 | POST | /api/agendamentos/lote | Marca vários serviços da mesma cliente de uma vez |
 | POST | /api/agendamentos/fechar-comanda | Conclui os serviços da comanda com uma forma de pagamento |
+| PUT | /api/agendamentos/{id}/nao-compareceu | Marca que a cliente não compareceu |
 | GET | /api/auth/situacao | Indica se é o primeiro acesso (sem usuários) |
 | POST | /api/auth/primeiro-acesso | Cria o primeiro administrador |
 | POST | /api/auth/login | Entra no sistema (retorna o token) |

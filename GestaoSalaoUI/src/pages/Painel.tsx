@@ -74,6 +74,25 @@ export default function Painel() {
     });
   };
 
+  const naoCompareceu = (a: IAgendamento) => {
+    confirmDialog({
+      message: `Marcar que ${a.cliente} não compareceu (${a.servico})?`,
+      header: "Não compareceu",
+      icon: "pi pi-user-minus",
+      acceptLabel: "Sim, marcar falta",
+      rejectLabel: "Não",
+      accept: async () => {
+        try {
+          await api.put(`/agendamentos/${a.id}/nao-compareceu`);
+          sucesso("Falta registrada.");
+          load();
+        } catch (err: any) {
+          erro(mensagemErro(err, "Erro ao registrar a falta."));
+        }
+      },
+    });
+  };
+
   const aPagar = remuneracoes.filter((r) => !r.pago).reduce((acc, r) => acc + r.valorTotal, 0);
   const pago = remuneracoes.filter((r) => r.pago).reduce((acc, r) => acc + r.valorTotal, 0);
 
@@ -148,13 +167,15 @@ export default function Painel() {
       {indicador("Concluídos", String(painel?.concluidos ?? 0), "pi pi-check-circle", "var(--primary-color)",
         `de ${painel?.totalAgendamentos ?? 0} marcados`)}
       {indicador("Aguardando", String(painel?.pendentes ?? 0), "pi pi-clock", "var(--orange-500)",
-        painel?.cancelados ? `${painel.cancelados} cancelado(s)` : undefined)}
+        [painel?.cancelados ? `${painel.cancelados} cancelado(s)` : "", painel?.faltas ? `${painel.faltas} falta(s)` : ""]
+          .filter(Boolean)
+          .join(" · ") || undefined)}
       {indicador("Ticket médio", moeda(painel?.ticketMedio), "pi pi-chart-line", "var(--blue-500)")}
     </div>
   );
 
   const agendaDia = (
-    <TabelaAgendamentos agendamentos={agendamentos} carregando={carregando} onConcluir={setConcluindo} onCancelar={cancelar} />
+    <TabelaAgendamentos agendamentos={agendamentos} carregando={carregando} onConcluir={setConcluindo} onCancelar={cancelar} onNaoCompareceu={naoCompareceu} />
   );
 
   return (

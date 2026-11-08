@@ -18,6 +18,7 @@ import IFuncionario from "../interfaces/IFuncionario";
 import IAgendamento from "../interfaces/IAgendamento";
 import TabelaAgendamentos from "../components/TabelaAgendamentos";
 import ConcluirAtendimentoDialog from "../components/ConcluirAtendimentoDialog";
+import LembretesDialog from "../components/LembretesDialog";
 import FormularioResponsivo from "../components/FormularioResponsivo";
 import BotaoNovo from "../components/BotaoNovo";
 import useIsMobile from "../hooks/useIsMobile";
@@ -91,6 +92,7 @@ export default function Agenda() {
   const [carregando, setCarregando] = useState(false);
 
   const [concluindo, setConcluindo] = useState<IAgendamento | null>(null);
+  const [lembretesAberto, setLembretesAberto] = useState(false);
   const [novoClienteVisivel, setNovoClienteVisivel] = useState(false);
   const [novoClienteNome, setNovoClienteNome] = useState("");
   const [novoClienteTelefone, setNovoClienteTelefone] = useState("");
@@ -260,6 +262,25 @@ export default function Agenda() {
           loadAgenda();
         } catch (err: any) {
           erro(mensagemErro(err, "Erro ao cancelar."));
+        }
+      },
+    });
+  };
+
+  const naoCompareceu = (a: IAgendamento) => {
+    confirmDialog({
+      message: `Marcar que ${a.cliente} não compareceu (${a.servico})?`,
+      header: "Não compareceu",
+      icon: "pi pi-user-minus",
+      acceptLabel: "Sim, marcar falta",
+      rejectLabel: "Não",
+      accept: async () => {
+        try {
+          await api.put(`/agendamentos/${a.id}/nao-compareceu`);
+          sucesso("Falta registrada.");
+          loadAgenda();
+        } catch (err: any) {
+          erro(mensagemErro(err, "Erro ao registrar a falta."));
         }
       },
     });
@@ -507,7 +528,7 @@ export default function Agenda() {
         />
         <Button icon="pi pi-chevron-right" className="p-button-outlined" aria-label="Próximo dia" onClick={() => setDia(somarDias(dia, 1))} />
       </div>
-      <div className="flex gap-2 mb-3">
+      <div className="flex gap-2 mb-2">
         <Dropdown
           value={filtroFuncionario}
           onChange={(e) => setFiltroFuncionario(e.value ?? null)}
@@ -520,6 +541,12 @@ export default function Agenda() {
         />
         {!mesmoDia(dia, hoje()) && <Button label="Hoje" className="p-button-outlined" onClick={() => setDia(hoje())} />}
       </div>
+      <Button
+        label="Enviar lembretes"
+        icon="pi pi-whatsapp"
+        className="p-button-outlined p-button-success w-full mb-3"
+        onClick={() => setLembretesAberto(true)}
+      />
     </>
   ) : (
     <div className="flex flex-wrap align-items-center gap-2">
@@ -543,6 +570,7 @@ export default function Agenda() {
         showClear
         style={{ minWidth: "13rem" }}
       />
+      <Button label="Lembretes" icon="pi pi-whatsapp" className="p-button-outlined p-button-success p-button-sm" onClick={() => setLembretesAberto(true)} />
     </div>
   );
 
@@ -561,6 +589,7 @@ export default function Agenda() {
       carregando={carregando}
       onConcluir={setConcluindo}
       onCancelar={cancelar}
+      onNaoCompareceu={naoCompareceu}
       onEditar={editar}
       onExcluir={excluir}
       podeAlterar={podeAlterar}
@@ -609,6 +638,8 @@ export default function Agenda() {
           </div>
         </div>
       )}
+
+      <LembretesDialog aberto={lembretesAberto} onFechar={() => setLembretesAberto(false)} />
 
       <ConcluirAtendimentoDialog
         agendamento={concluindo}

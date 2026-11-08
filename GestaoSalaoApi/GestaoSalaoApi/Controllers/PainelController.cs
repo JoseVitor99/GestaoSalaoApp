@@ -41,6 +41,7 @@ namespace GestaoSalaoApi.Controllers
                 Pendentes = pendentes.Count,
                 Concluidos = concluidos.Count,
                 Cancelados = agendamentos.Count(a => a.Status == StatusAgendamento.Cancelado),
+                Faltas = agendamentos.Count(a => a.Status == StatusAgendamento.NaoCompareceu),
                 Faturamento = faturamento,
                 PrevisaoPendentes = pendentes.Sum(a => a.Valor),
                 TicketMedio = concluidos.Count > 0 ? Math.Round(faturamento / concluidos.Count, 2) : 0,

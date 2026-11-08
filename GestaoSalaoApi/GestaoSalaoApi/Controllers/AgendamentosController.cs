@@ -79,6 +79,10 @@ namespace GestaoSalaoApi.Controllers
         public Task<IActionResult> Cancelar(int id) =>
             Executar(() => _service.Cancelar(id, Restricao));
 
+        [HttpPut("{id}/nao-compareceu")]
+        public Task<IActionResult> NaoCompareceu(int id) =>
+            Executar(() => _service.MarcarNaoCompareceu(id, Restricao));
+
         [HttpDelete("{id}")]
         public async Task<IActionResult> Delete(int id)
         {

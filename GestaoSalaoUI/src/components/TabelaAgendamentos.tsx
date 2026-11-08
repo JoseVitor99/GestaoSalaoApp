@@ -14,6 +14,7 @@ interface Props {
   carregando?: boolean;
   onConcluir: (a: IAgendamento) => void;
   onCancelar: (a: IAgendamento) => void;
+  onNaoCompareceu?: (a: IAgendamento) => void;
   onEditar?: (a: IAgendamento) => void;
   onExcluir?: (a: IAgendamento) => void;
   mensagemVazia?: string;
@@ -25,12 +26,17 @@ export default function TabelaAgendamentos({
   carregando,
   onConcluir,
   onCancelar,
+  onNaoCompareceu,
   onEditar,
   onExcluir,
   mensagemVazia = "Nenhum horário marcado para este dia.",
   podeAlterar = () => true,
 }: Props) {
   const mobile = useIsMobile();
+
+  // A falta só pode ser marcada depois que o horário passou
+  const podeMarcarFalta = (a: IAgendamento) =>
+    !!onNaoCompareceu && a.status === STATUS_AGENDAMENTO.AGENDADO && new Date(a.dataHora) <= new Date();
 
   const horarioTemplate = (a: IAgendamento) => (
     <div>
@@ -80,6 +86,15 @@ export default function TabelaAgendamentos({
             tooltip="Concluir atendimento (receber)"
             tooltipOptions={{ position: "top" }}
             onClick={() => onConcluir(a)}
+          />
+        )}
+        {podeMarcarFalta(a) && (
+          <Button
+            icon="pi pi-user-minus"
+            className="p-button-help p-button-sm p-button-outlined"
+            tooltip="Não compareceu"
+            tooltipOptions={{ position: "top" }}
+            onClick={() => onNaoCompareceu!(a)}
           />
         )}
         {pendente && onEditar && (
@@ -135,7 +150,7 @@ export default function TabelaAgendamentos({
         {agendamentos.map((a) => {
           const pendente = a.status === STATUS_AGENDAMENTO.AGENDADO;
           const classe =
-            a.status === STATUS_AGENDAMENTO.CONCLUIDO ? "concluido" : a.status === STATUS_AGENDAMENTO.CANCELADO ? "cancelado" : "";
+            a.status === STATUS_AGENDAMENTO.CONCLUIDO ? "concluido" : a.status === STATUS_AGENDAMENTO.CANCELADO || a.status === STATUS_AGENDAMENTO.NAO_COMPARECEU ? "cancelado" : "";
 
           return (
             <div key={a.id} className={`item-lista ${classe}`}>
@@ -178,6 +193,9 @@ export default function TabelaAgendamentos({
                     aria-label="WhatsApp"
                     onClick={() => window.open(linkWhatsApp(a.clienteTelefone), "_blank")}
                   />
+                  {podeMarcarFalta(a) && (
+                    <Button icon="pi pi-user-minus" className="p-button-outlined p-button-help" aria-label="Não compareceu" onClick={() => onNaoCompareceu!(a)} />
+                  )}
                   {onEditar && (
                     <Button icon="pi pi-pencil" className="p-button-outlined p-button-warning" aria-label="Remarcar" onClick={() => onEditar(a)} />
                   )}
@@ -185,7 +203,7 @@ export default function TabelaAgendamentos({
                 </div>
               )}
 
-              {!pendente && a.status === STATUS_AGENDAMENTO.CANCELADO && onExcluir && podeAlterar(a) && (
+              {a.status === STATUS_AGENDAMENTO.CANCELADO && onExcluir && podeAlterar(a) && (
                 <div className="item-acoes">
                   <Button label="Excluir" icon="pi pi-trash" className="p-button-text p-button-danger p-button-sm" onClick={() => onExcluir(a)} />
                 </div>
@@ -205,7 +223,9 @@ export default function TabelaAgendamentos({
       dataKey="id"
       emptyMessage={mensagemVazia}
       className="p-datatable-sm"
-      rowClassName={(a: IAgendamento) => (a.status === STATUS_AGENDAMENTO.CANCELADO ? "linha-cancelada" : "")}
+      rowClassName={(a: IAgendamento) =>
+        a.status === STATUS_AGENDAMENTO.CANCELADO || a.status === STATUS_AGENDAMENTO.NAO_COMPARECEU ? "linha-cancelada" : ""
+      }
     >
       <Column header="Horário" body={horarioTemplate} style={{ width: "5.5rem" }} />
       <Column header="Cliente" body={clienteTemplate} style={{ minWidth: "10rem" }} />

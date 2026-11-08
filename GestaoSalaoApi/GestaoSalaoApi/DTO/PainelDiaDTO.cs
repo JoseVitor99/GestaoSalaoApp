@@ -8,6 +8,7 @@ namespace GestaoSalaoApi.DTO
         public int Pendentes { get; set; }
         public int Concluidos { get; set; }
         public int Cancelados { get; set; }
+        public int Faltas { get; set; }
 
         public decimal Faturamento { get; set; }
 
