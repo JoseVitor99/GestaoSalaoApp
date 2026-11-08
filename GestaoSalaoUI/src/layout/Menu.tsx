@@ -13,8 +13,8 @@ import { aplicarTema, Tema, temaAtual } from "../utilities/tema";
 const PAGINAS = [
   { label: "Painel", curto: "Início", icon: "pi pi-home", rota: "/", admin: true },
   { label: "Agenda", curto: "Agenda", icon: "pi pi-calendar", rota: "/agenda", admin: false },
-  { label: "Clientes", curto: "Clientes", icon: "pi pi-users", rota: "/clientes", admin: false },
   { label: "Funcionários", curto: "Equipe", icon: "pi pi-id-card", rota: "/funcionarios", admin: true },
+  { label: "Clientes", curto: "Clientes", icon: "pi pi-users", rota: "/clientes", admin: false },
   // No celular, Serviços fica no menu do usuário para a barra inferior não passar de seis itens
   { label: "Serviços", curto: "Serviços", icon: "pi pi-list", rota: "/servicos", admin: true, somenteComputador: true },
   { label: "Remuneração", curto: "Pagar", icon: "pi pi-wallet", rota: "/remuneracao", admin: true },

@@ -406,18 +406,6 @@ export default function Agenda() {
               </div>
             )}
             <Dropdown
-              value={item.servicoId}
-              onChange={(e) => escolherServico(item.chave, e.value)}
-              options={servicos}
-              optionLabel="descricao"
-              optionValue="id"
-              itemTemplate={servicoTemplate}
-              valueTemplate={() => servicoTemplate(servico)}
-              placeholder="Selecione o serviço"
-              emptyMessage="Cadastre os serviços primeiro"
-              className="w-full mb-2"
-            />
-            <Dropdown
               value={item.funcionarioId}
               onChange={(e) => alterarItem(item.chave, { funcionarioId: e.value })}
               options={administrador ? funcionarios : funcionarios.filter((f) => f.id === meuFuncionario)}
@@ -432,6 +420,18 @@ export default function Agenda() {
               )}
               placeholder="Selecione o profissional"
               emptyMessage="Cadastre os funcionários primeiro"
+              className="w-full mb-2"
+            />
+            <Dropdown
+              value={item.servicoId}
+              onChange={(e) => escolherServico(item.chave, e.value)}
+              options={servicos}
+              optionLabel="descricao"
+              optionValue="id"
+              itemTemplate={servicoTemplate}
+              valueTemplate={() => servicoTemplate(servico)}
+              placeholder="Selecione o serviço"
+              emptyMessage="Cadastre os serviços primeiro"
               className="w-full mb-2"
             />
             <div className="grid">
