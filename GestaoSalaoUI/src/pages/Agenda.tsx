@@ -106,7 +106,6 @@ export default function Agenda() {
 
   useEffect(() => {
     loadCadastros();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {

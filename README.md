@@ -39,6 +39,7 @@ Responsável por:
 
 * React
 * TypeScript
+* Vite
 * PrimeReact / PrimeFlex
 
 Responsável por:

@@ -45,7 +45,6 @@ export default function Servicos() {
 
   useEffect(() => {
     load();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const limpar = () => {
