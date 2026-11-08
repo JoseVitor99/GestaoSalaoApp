@@ -1,0 +1,361 @@
+/* O PrimeFlex 4 usa variáveis --p-*, que o tema lara não define */
+:root {
+  --p-primary-color: var(--primary-color);
+  --p-primary-contrast-color: var(--primary-color-text);
+  --p-content-border-radius: var(--border-radius);
+  --p-surface-0: var(--surface-0);
+  --p-surface-50: var(--surface-50);
+  --p-surface-100: var(--surface-100);
+  --p-surface-200: var(--surface-200);
+  --p-surface-300: var(--surface-300);
+  --p-surface-500: var(--surface-500);
+  --p-surface-700: var(--surface-700);
+  --p-surface-900: var(--surface-900);
+  --p-green-500: var(--green-500);
+  --p-green-600: var(--green-600);
+  --p-orange-500: var(--orange-500);
+  --p-orange-600: var(--orange-600);
+  --p-red-500: var(--red-500);
+  --p-blue-500: var(--blue-500);
+}
+
+body {
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", "Oxygen",
+    "Ubuntu", "Cantarell", "Fira Sans", "Droid Sans", "Helvetica Neue", sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  background: var(--surface-ground);
+  color: var(--text-color);
+}
+
+.conteudo {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 1.25rem 1rem 3rem;
+}
+
+.menu-ativo > .p-menuitem-content {
+  background: var(--highlight-bg);
+}
+
+.menu-ativo .p-menuitem-text,
+.menu-ativo .p-menuitem-icon {
+  color: var(--highlight-text-color) !important;
+}
+
+.indicador {
+  border-left: 4px solid var(--primary-color);
+}
+
+.indicador .valor {
+  font-size: 1.6rem;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.indicador .rotulo {
+  color: var(--text-color-secondary);
+  font-size: 0.875rem;
+}
+
+.linha-cancelada {
+  opacity: 0.55;
+}
+
+.linha-cancelada td:nth-child(2) {
+  text-decoration: line-through;
+}
+
+.texto-pequeno {
+  font-size: 0.8rem;
+  color: var(--text-color-secondary);
+}
+
+.marca-icone {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: var(--primary-color);
+  color: #fff;
+  flex-shrink: 0;
+}
+
+.p-dialog,
+.p-confirm-dialog {
+  max-width: 95vw;
+}
+
+/* Celular */
+.barra-topo-mobile {
+  position: sticky;
+  top: 0;
+  z-index: 900;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.65rem 1rem;
+  padding-top: calc(0.65rem + env(safe-area-inset-top));
+  background: var(--surface-card);
+  border-bottom: 1px solid var(--surface-border);
+}
+
+.barra-topo-pagina {
+  font-weight: 600;
+  color: var(--primary-color);
+  background: var(--highlight-bg);
+  padding: 0.3rem 0.8rem;
+  border-radius: 1rem;
+  font-size: 0.85rem;
+}
+
+.nav-inferior {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 900;
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  background: var(--surface-card);
+  border-top: 1px solid var(--surface-border);
+  padding-bottom: env(safe-area-inset-bottom);
+  box-shadow: 0 -4px 14px rgba(0, 0, 0, 0.05);
+}
+
+.nav-inferior button {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.2rem;
+  padding: 0.45rem 0 0.55rem;
+  border: 0;
+  background: none;
+  font-family: inherit;
+  font-size: 0.68rem;
+  color: var(--text-color-secondary);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.nav-inferior .icone {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.75rem;
+  height: 1.8rem;
+  border-radius: 1rem;
+  font-size: 1.1rem;
+  transition: background-color 0.15s;
+}
+
+.nav-inferior button.ativo {
+  color: var(--primary-color);
+  font-weight: 700;
+}
+
+.nav-inferior button.ativo .icone {
+  background: var(--highlight-bg);
+}
+
+.botao-flutuante.p-button {
+  position: fixed;
+  right: 1rem;
+  bottom: calc(4.9rem + env(safe-area-inset-bottom));
+  z-index: 950;
+  height: 3.25rem;
+  padding: 0 1.4rem;
+  border-radius: 2rem;
+  font-weight: 700;
+  box-shadow: 0 8px 20px rgba(236, 72, 153, 0.38);
+}
+
+.folha-inferior.p-sidebar {
+  height: auto !important;
+  max-height: 92vh;
+  border-radius: 1.25rem 1.25rem 0 0;
+}
+
+.folha-inferior .p-sidebar-header {
+  padding: 1rem 1.25rem 0.25rem;
+}
+
+.folha-inferior .p-sidebar-content {
+  padding: 0.5rem 1.25rem calc(1.25rem + env(safe-area-inset-bottom));
+  overflow-y: auto;
+}
+
+.titulo-pagina {
+  margin: 0.25rem 0 0.15rem;
+  font-size: 1.35rem;
+  font-weight: 700;
+}
+
+.secao-titulo {
+  margin: 1.25rem 0 0.6rem;
+  font-size: 1.05rem;
+  font-weight: 700;
+}
+
+.item-lista {
+  background: var(--surface-card);
+  border-radius: 1rem;
+  padding: 0.9rem 1rem;
+  margin-bottom: 0.65rem;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06), 0 1px 2px rgba(0, 0, 0, 0.04);
+}
+
+.item-lista.cancelado {
+  opacity: 0.55;
+}
+
+.item-lista.cancelado .item-titulo {
+  text-decoration: line-through;
+}
+
+.item-titulo {
+  font-weight: 600;
+  font-size: 1rem;
+  color: var(--text-color);
+}
+
+.item-acoes {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--surface-border);
+}
+
+.item-acoes .p-button {
+  flex: 1;
+  justify-content: center;
+}
+
+.item-acoes .p-button.p-button-icon-only {
+  flex: 0 0 2.75rem;
+}
+
+.item-acoes .p-button.p-button-text {
+  flex: 0 0 auto;
+  margin-left: auto;
+}
+
+.horario-bloco {
+  min-width: 3.6rem;
+  padding-right: 0.75rem;
+  margin-right: 0.75rem;
+  border-right: 3px solid var(--primary-color);
+}
+
+.horario-bloco .hora {
+  font-size: 1.15rem;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.item-lista.concluido .horario-bloco {
+  border-right-color: var(--green-500);
+}
+
+.item-lista.cancelado .horario-bloco {
+  border-right-color: var(--surface-400);
+}
+
+.avatar-iniciais {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.6rem;
+  height: 2.6rem;
+  border-radius: 50%;
+  background: var(--highlight-bg);
+  color: var(--primary-color);
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.linha-valor {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.55rem 0;
+  border-bottom: 1px solid var(--surface-border);
+}
+
+.linha-valor:last-child {
+  border-bottom: 0;
+}
+
+.grade-valores {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.6rem 1rem;
+  margin-top: 0.75rem;
+}
+
+.grade-valores .rotulo {
+  font-size: 0.75rem;
+  color: var(--text-color-secondary);
+}
+
+.grade-valores .valor {
+  font-weight: 600;
+}
+
+.navegador-data {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.navegador-data .p-calendar {
+  flex: 1;
+}
+
+.navegador-data .p-calendar input {
+  text-align: center;
+  font-weight: 600;
+}
+
+@media (max-width: 768px) {
+  .conteudo {
+    padding: 0.75rem 0.85rem calc(9rem + env(safe-area-inset-bottom));
+  }
+
+  .indicador {
+    padding: 0.85rem !important;
+  }
+
+  .indicador .valor {
+    font-size: 1.25rem;
+  }
+
+  .indicador .rotulo {
+    font-size: 0.75rem;
+  }
+
+  .p-toast.p-toast-top-right {
+    top: calc(4rem + env(safe-area-inset-top)) !important;
+    left: 0.75rem !important;
+    right: 0.75rem !important;
+    width: auto;
+  }
+
+  .p-tabview .p-tabview-nav li .p-tabview-nav-link {
+    padding: 0.85rem 0.9rem;
+  }
+
+  .p-tabview .p-tabview-panels {
+    padding: 0.75rem 0 0;
+    background: transparent;
+  }
+
+  .p-tabview .p-tabview-nav {
+    background: transparent;
+  }
+}

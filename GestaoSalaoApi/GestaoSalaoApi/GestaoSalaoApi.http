@@ -1,0 +1,16 @@
+@GestaoSalaoApi_HostAddress = http://localhost:5100
+
+GET {{GestaoSalaoApi_HostAddress}}/api/servicos
+Accept: application/json
+
+###
+
+GET {{GestaoSalaoApi_HostAddress}}/api/painel
+Accept: application/json
+
+###
+
+GET {{GestaoSalaoApi_HostAddress}}/api/remuneracoes
+Accept: application/json
+
+###

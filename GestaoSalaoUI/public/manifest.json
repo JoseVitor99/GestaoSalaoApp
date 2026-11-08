@@ -1,0 +1,8 @@
+{
+  "short_name": "Gestão Salão",
+  "name": "Gestão de Salão · CIA da Beleza",
+  "start_url": ".",
+  "display": "standalone",
+  "theme_color": "#ec4899",
+  "background_color": "#ffffff"
+}
