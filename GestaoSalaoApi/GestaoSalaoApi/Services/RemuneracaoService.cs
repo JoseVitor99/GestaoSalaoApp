@@ -28,6 +28,10 @@ namespace GestaoSalaoApi.Services
                 .OrderBy(f => f.Nome)
                 .ToListAsync();
 
+            var valesAbertos = await _context.Vales
+                .Where(v => v.PagamentoId == null && v.Data <= dia)
+                .ToListAsync();
+
             return funcionarios
                 .Where(f => f.Ativo
                          || concluidos.Any(a => a.FuncionarioId == f.Id)
@@ -39,7 +43,9 @@ namespace GestaoSalaoApi.Services
                         return DoPagamento(f, pagamento);
 
                     var atendimentos = concluidos.Where(a => a.FuncionarioId == f.Id).ToList();
-                    return Calcular(f, dia, atendimentos, incluirDiaria: atendimentos.Count > 0);
+                    var calculo = Calcular(f, dia, atendimentos, incluirDiaria: atendimentos.Count > 0);
+                    calculo.ValorVales = valesAbertos.Where(v => v.FuncionarioId == f.Id).Sum(v => v.Valor);
+                    return calculo;
                 })
                 .ToList();
         }
@@ -82,6 +88,9 @@ namespace GestaoSalaoApi.Services
             _context.PagamentosDiarios.Add(pagamento);
             await _context.SaveChangesAsync();
 
+            pagamento.ValorVales = await DescontarVales(funcionario.Id, dia, pagamento);
+            await _context.SaveChangesAsync();
+
             return DoPagamento(funcionario, pagamento);
         }
 
@@ -89,6 +98,10 @@ namespace GestaoSalaoApi.Services
         {
             var pagamento = await _context.PagamentosDiarios.FindAsync(pagamentoId)
                 ?? throw new RegraNegocioException("Pagamento não encontrado.");
+
+            // Os vales descontados voltam a ficar em aberto
+            var vales = await _context.Vales.Where(v => v.PagamentoId == pagamento.Id).ToListAsync();
+            vales.ForEach(v => v.PagamentoId = null);
 
             _context.PagamentosDiarios.Remove(pagamento);
             await _context.SaveChangesAsync();
@@ -119,8 +132,117 @@ namespace GestaoSalaoApi.Services
                 ValorDiaria = p.ValorDiaria,
                 ValorComissao = p.ValorComissao,
                 ValorTotal = p.ValorTotal,
+                ValorVales = p.ValorVales,
                 DataPagamento = p.DataPagamento
             }).ToList();
+        }
+
+        public async Task<List<ValeDTO>> ListarVales(int? funcionarioId, bool somenteAbertos, DateTime? desde)
+        {
+            var query = _context.Vales.Include(v => v.Funcionario).Include(v => v.Pagamento).AsQueryable();
+
+            if (funcionarioId.HasValue)
+                query = query.Where(v => v.FuncionarioId == funcionarioId.Value);
+
+            // Abertos aparecem sempre; os descontados, só a partir da data pedida
+            query = somenteAbertos
+                ? query.Where(v => v.PagamentoId == null)
+                : query.Where(v => v.PagamentoId == null || v.Data >= (desde ?? DateTime.Today.AddDays(-30)));
+
+            var vales = await query.OrderByDescending(v => v.Data).ThenByDescending(v => v.Id).ToListAsync();
+
+            return vales.Select(v => new ValeDTO
+            {
+                Id = v.Id,
+                FuncionarioId = v.FuncionarioId,
+                Funcionario = v.Funcionario?.Nome ?? string.Empty,
+                Data = v.Data,
+                Valor = v.Valor,
+                Observacao = v.Observacao,
+                Descontado = v.PagamentoId != null,
+                DescontadoNoDia = v.Pagamento?.Data
+            }).ToList();
+        }
+
+        public async Task<ValeDTO> CriarVale(ValeInputDTO dto)
+        {
+            var funcionario = await _context.Funcionarios.FindAsync(dto.FuncionarioId)
+                ?? throw new RegraNegocioException("Funcionário não encontrado.");
+
+            if (dto.Valor <= 0)
+                throw new RegraNegocioException("O valor do vale deve ser maior que zero.");
+
+            var dia = SomenteData(dto.Data == default ? DateTime.Today : dto.Data);
+            if (dia > DateTime.Today)
+                throw new RegraNegocioException("A data do vale não pode ser futura.");
+
+            var vale = new Vale
+            {
+                FuncionarioId = funcionario.Id,
+                Data = dia,
+                Valor = Math.Round(dto.Valor, 2),
+                Observacao = string.IsNullOrWhiteSpace(dto.Observacao) ? null : dto.Observacao.Trim(),
+                DataRegistro = DateTime.Now
+            };
+
+            _context.Vales.Add(vale);
+            await _context.SaveChangesAsync();
+
+            return new ValeDTO
+            {
+                Id = vale.Id,
+                FuncionarioId = funcionario.Id,
+                Funcionario = funcionario.Nome ?? string.Empty,
+                Data = vale.Data,
+                Valor = vale.Valor,
+                Observacao = vale.Observacao
+            };
+        }
+
+        public async Task ExcluirVale(int id)
+        {
+            var vale = await _context.Vales.FindAsync(id)
+                ?? throw new RegraNegocioException("Vale não encontrado.");
+
+            if (vale.PagamentoId != null)
+                throw new RegraNegocioException("Este vale já foi descontado num pagamento. Estorne o pagamento antes de excluir.");
+
+            _context.Vales.Remove(vale);
+            await _context.SaveChangesAsync();
+        }
+
+        // Desconta os vales em aberto do mais antigo ao mais novo; o que não couber continua em aberto
+        private async Task<decimal> DescontarVales(int funcionarioId, DateTime dia, PagamentoDiario pagamento)
+        {
+            var vales = await _context.Vales
+                .Where(v => v.FuncionarioId == funcionarioId && v.PagamentoId == null && v.Data <= dia)
+                .OrderBy(v => v.Data).ThenBy(v => v.Id)
+                .ToListAsync();
+
+            var disponivel = pagamento.ValorTotal;
+
+            foreach (var vale in vales)
+            {
+                if (disponivel <= 0) break;
+
+                if (vale.Valor > disponivel)
+                {
+                    _context.Vales.Add(new Vale
+                    {
+                        FuncionarioId = vale.FuncionarioId,
+                        Data = vale.Data,
+                        Valor = vale.Valor - disponivel,
+                        Observacao = $"Restante do vale de {vale.Data:dd/MM}" + (vale.Observacao != null ? $" ({vale.Observacao})" : ""),
+                        DataRegistro = DateTime.Now
+                    });
+                    vale.Valor = disponivel;
+                }
+
+                vale.PagamentoId = pagamento.Id;
+                disponivel -= vale.Valor;
+            }
+
+            return pagamento.ValorTotal - disponivel;
         }
 
         private static DateTime SomenteData(DateTime data) =>
@@ -186,6 +308,7 @@ namespace GestaoSalaoApi.Services
             DiariaIncluida = p.ValorDiaria > 0,
             ValorDiaria = p.ValorDiaria,
             ValorComissao = p.ValorComissao,
+            ValorVales = p.ValorVales,
             Pago = true,
             PagamentoId = p.Id,
             DataPagamento = p.DataPagamento

@@ -401,3 +401,71 @@ body {
   border-radius: var(--border-radius);
   padding: 0.75rem;
 }
+
+.selecao-dias {
+  display: flex;
+  flex-wrap: wrap;
+}
+
+.selecao-dias .p-button {
+  flex: 1;
+  padding: 0.6rem 0.4rem;
+  justify-content: center;
+}
+
+.avisos-dia {
+  border: 1px solid var(--surface-border);
+  border-radius: 10px;
+  padding: 0.25rem 0.75rem;
+  background: var(--surface-ground);
+}
+
+.aviso-linha {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  min-height: 2.5rem;
+}
+
+.aviso-linha + .aviso-linha {
+  border-top: 1px solid var(--surface-border);
+}
+
+.aviso-linha > .pi {
+  color: var(--text-color-secondary);
+}
+
+.linha-horario {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  min-height: 3.25rem;
+  border-bottom: 1px solid var(--surface-border);
+}
+
+.linha-horario input[type="time"] {
+  width: 7.5rem;
+  padding: 0.5rem;
+}
+
+.linha-horario .nome-dia {
+  width: 7.5rem;
+  white-space: nowrap;
+}
+
+@media (max-width: 576px) {
+  .linha-horario {
+    flex-wrap: wrap;
+    padding: 0.5rem 0;
+    row-gap: 0.5rem;
+  }
+
+  .linha-horario .nome-dia {
+    width: auto;
+    flex: 1;
+  }
+
+  .linha-horario > span:last-child {
+    flex-basis: 100%;
+  }
+}

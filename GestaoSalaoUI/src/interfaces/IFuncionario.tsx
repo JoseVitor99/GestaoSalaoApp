@@ -7,6 +7,7 @@ interface IFuncionario {
   valorDiaria: number;
   percentualComissao: number;
   ativo: boolean;
+  diasFolga: number[];
 }
 
 export default IFuncionario;

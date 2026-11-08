@@ -38,4 +38,15 @@ const TIPOS_REMUNERACAO = [
   { value: TIPO_REMUNERACAO.DIARIA_MAIS_COMISSAO, descricao: "Diária + comissão" },
 ];
 
-export { NOME_APP, NOME_CLIENTE, PERFIL, PERFIS, STATUS_AGENDAMENTO, FORMA_PAGAMENTO, TIPO_REMUNERACAO, TIPOS_REMUNERACAO };
+// Começa na segunda; o valor segue o padrão do .NET (0 = domingo)
+const DIAS_SEMANA = [
+  { value: 1, curto: "Seg", descricao: "Segunda-feira" },
+  { value: 2, curto: "Ter", descricao: "Terça-feira" },
+  { value: 3, curto: "Qua", descricao: "Quarta-feira" },
+  { value: 4, curto: "Qui", descricao: "Quinta-feira" },
+  { value: 5, curto: "Sex", descricao: "Sexta-feira" },
+  { value: 6, curto: "Sáb", descricao: "Sábado" },
+  { value: 0, curto: "Dom", descricao: "Domingo" },
+];
+
+export { DIAS_SEMANA, NOME_APP, NOME_CLIENTE, PERFIL, PERFIS, STATUS_AGENDAMENTO, FORMA_PAGAMENTO, TIPO_REMUNERACAO, TIPOS_REMUNERACAO };

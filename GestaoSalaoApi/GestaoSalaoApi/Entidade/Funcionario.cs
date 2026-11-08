@@ -1,4 +1,6 @@
 using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
+using System.Text.Json.Serialization;
 
 namespace GestaoSalaoApi.Entidade
 {
@@ -30,5 +32,17 @@ namespace GestaoSalaoApi.Entidade
         public decimal PercentualComissao { get; set; }
 
         public bool Ativo { get; set; } = true;
+
+        // Dias da semana de folga, gravados como "1,3" (0 = domingo)
+        [MaxLength(20)]
+        [JsonIgnore]
+        public string? Folgas { get; set; }
+
+        [NotMapped]
+        public List<int> DiasFolga
+        {
+            get => string.IsNullOrWhiteSpace(Folgas) ? new List<int>() : Folgas.Split(',').Select(int.Parse).ToList();
+            set => Folgas = value == null || value.Count == 0 ? null : string.Join(",", value.Distinct().OrderBy(d => d));
+        }
     }
 }

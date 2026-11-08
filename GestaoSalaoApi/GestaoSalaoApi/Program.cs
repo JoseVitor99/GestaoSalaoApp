@@ -12,6 +12,7 @@ builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
 builder.Services.AddScoped<CadastroService>();
+builder.Services.AddScoped<AgendaService>();
 builder.Services.AddScoped<AgendamentoService>();
 builder.Services.AddScoped<RemuneracaoService>();
 builder.Services.AddScoped<UsuarioService>();

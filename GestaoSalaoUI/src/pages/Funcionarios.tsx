@@ -5,6 +5,7 @@ import { InputText } from "primereact/inputtext";
 import { InputNumber } from "primereact/inputnumber";
 import { Dropdown } from "primereact/dropdown";
 import { InputSwitch } from "primereact/inputswitch";
+import { SelectButton } from "primereact/selectbutton";
 import { Button } from "primereact/button";
 import { DataTable } from "primereact/datatable";
 import { Column } from "primereact/column";
@@ -16,9 +17,14 @@ import FormularioResponsivo from "../components/FormularioResponsivo";
 import BotaoNovo from "../components/BotaoNovo";
 import useIsMobile from "../hooks/useIsMobile";
 import IFuncionario from "../interfaces/IFuncionario";
-import { TIPO_REMUNERACAO, TIPOS_REMUNERACAO } from "../utilities/constants";
+import { DIAS_SEMANA, TIPO_REMUNERACAO, TIPOS_REMUNERACAO } from "../utilities/constants";
 import { iniciais, mensagemErro, moeda, somenteDigitos } from "../utilities/formatters";
 import InputTelefone from "../components/InputTelefone";
+
+const folgas = (f: IFuncionario) =>
+  DIAS_SEMANA.filter((d) => f.diasFolga?.includes(d.value))
+    .map((d) => d.curto)
+    .join(", ");
 
 export default function Funcionarios() {
   const toast = useRef<Toast>(null);
@@ -35,6 +41,7 @@ export default function Funcionarios() {
   const [valorDiaria, setValorDiaria] = useState<number | null>(null);
   const [percentualComissao, setPercentualComissao] = useState<number | null>(null);
   const [ativo, setAtivo] = useState(true);
+  const [diasFolga, setDiasFolga] = useState<number[]>([]);
   const [editandoId, setEditandoId] = useState<number | null>(null);
 
   const recebeDiaria = tipoRemuneracao !== TIPO_REMUNERACAO.COMISSAO;
@@ -65,6 +72,7 @@ export default function Funcionarios() {
     setValorDiaria(null);
     setPercentualComissao(null);
     setAtivo(true);
+    setDiasFolga([]);
     setEditandoId(null);
   };
 
@@ -83,6 +91,7 @@ export default function Funcionarios() {
       valorDiaria: recebeDiaria ? valorDiaria : 0,
       percentualComissao: recebeComissao ? percentualComissao : 0,
       ativo,
+      diasFolga,
     };
 
     try {
@@ -109,6 +118,7 @@ export default function Funcionarios() {
     setValorDiaria(f.valorDiaria || null);
     setPercentualComissao(f.percentualComissao || null);
     setAtivo(f.ativo);
+    setDiasFolga(f.diasFolga ?? []);
     setFormAberto(true);
     if (!mobile) window.scrollTo({ top: 0, behavior: "smooth" });
   };
@@ -238,6 +248,20 @@ export default function Funcionarios() {
         )}
       </div>
 
+      <div className="field mb-3">
+        <label className="block mb-2">Folga semanal</label>
+        <SelectButton
+          value={diasFolga}
+          onChange={(e) => setDiasFolga(e.value ?? [])}
+          options={DIAS_SEMANA}
+          optionLabel="curto"
+          optionValue="value"
+          multiple
+          className="selecao-dias"
+        />
+        <small className="texto-pequeno block mt-1">Nesses dias a agenda não aceita horários com este profissional.</small>
+      </div>
+
       <div className="field mb-4 flex align-items-center gap-2">
         <InputSwitch checked={ativo} onChange={(e) => setAtivo(!!e.value)} />
         <span>{ativo ? "Ativo (aparece na agenda)" : "Inativo"}</span>
@@ -274,7 +298,10 @@ export default function Funcionarios() {
             <span className="avatar-iniciais">{iniciais(f.nome)}</span>
             <div className="flex-1" style={{ minWidth: 0 }}>
               <div className="item-titulo">{f.nome}</div>
-              <div className="texto-pequeno mt-1">{f.funcao || "Sem função definida"}</div>
+              <div className="texto-pequeno mt-1">
+                {f.funcao || "Sem função definida"}
+                {f.diasFolga?.length > 0 && ` · folga: ${folgas(f)}`}
+              </div>
             </div>
             <Tag value={f.ativo ? "Ativo" : "Inativo"} severity={f.ativo ? "success" : "secondary"} rounded />
           </div>
@@ -330,7 +357,15 @@ export default function Funcionarios() {
             <Card title={`Equipe (${funcionarios.filter((f) => f.ativo).length} ativos)`}>
               <DataTable value={funcionarios} paginator rows={10} className="p-datatable-sm" emptyMessage="Nenhum funcionário cadastrado">
                 <Column field="nome" header="Nome" sortable />
-                <Column field="funcao" header="Função" />
+                <Column
+                  header="Função"
+                  body={(f: IFuncionario) => (
+                    <div>
+                      <div>{f.funcao}</div>
+                      {f.diasFolga?.length > 0 && <div className="texto-pequeno">Folga: {folgas(f)}</div>}
+                    </div>
+                  )}
+                />
                 <Column header="Remuneração" body={remuneracaoTemplate} />
                 <Column
                   header="Situação"

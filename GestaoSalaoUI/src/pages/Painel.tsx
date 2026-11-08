@@ -93,7 +93,7 @@ export default function Painel() {
     });
   };
 
-  const aPagar = remuneracoes.filter((r) => !r.pago).reduce((acc, r) => acc + r.valorTotal, 0);
+  const aPagar = remuneracoes.filter((r) => !r.pago).reduce((acc, r) => acc + r.valorAPagar, 0);
   const pago = remuneracoes.filter((r) => r.pago).reduce((acc, r) => acc + r.valorTotal, 0);
 
   const indicador = (rotulo: string, valor: string, icone: string, cor: string, detalhe?: string) => (
@@ -140,7 +140,10 @@ export default function Painel() {
         <div key={r.funcionarioId} className="linha-valor">
           <span>
             {r.funcionario}
-            <div className="texto-pequeno">{r.quantidadeAtendimentos} atendimento(s)</div>
+            <div className="texto-pequeno">
+              {r.quantidadeAtendimentos} atendimento(s)
+              {r.valorVales > 0 && !r.pago && ` · vales ${moeda(Math.min(r.valorVales, r.valorTotal))}`}
+            </div>
           </span>
           <span className={`font-semibold ${r.pago ? "text-green-600" : ""}`}>
             {r.pago && <i className="pi pi-check-circle mr-1" />}

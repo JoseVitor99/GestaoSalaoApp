@@ -11,6 +11,7 @@ import Servicos from "./pages/Servicos";
 import Remuneracao from "./pages/Remuneracao";
 import Usuarios from "./pages/Usuarios";
 import MeusGanhos from "./pages/MeusGanhos";
+import Horarios from "./pages/Horarios";
 import { useAutenticacao } from "./services/autenticacao";
 
 function App() {
@@ -41,6 +42,7 @@ function App() {
               <Route path="/servicos" element={<Servicos />} />
               <Route path="/remuneracao" element={<Remuneracao />} />
               <Route path="/usuarios" element={<Usuarios />} />
+              <Route path="/horarios" element={<Horarios />} />
             </>
           ) : (
             <Route path="/meus-ganhos" element={<MeusGanhos />} />

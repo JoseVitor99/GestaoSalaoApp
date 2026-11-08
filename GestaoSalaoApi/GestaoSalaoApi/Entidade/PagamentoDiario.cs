@@ -20,6 +20,9 @@ namespace GestaoSalaoApi.Entidade
 
         public decimal ValorTotal { get; set; }
 
+        // Vales descontados neste pagamento; o valor entregue é ValorTotal - ValorVales
+        public decimal ValorVales { get; set; }
+
         public DateTime DataPagamento { get; set; }
     }
 }

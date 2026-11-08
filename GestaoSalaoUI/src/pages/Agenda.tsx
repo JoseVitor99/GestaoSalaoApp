@@ -19,6 +19,8 @@ import IAgendamento from "../interfaces/IAgendamento";
 import TabelaAgendamentos from "../components/TabelaAgendamentos";
 import ConcluirAtendimentoDialog from "../components/ConcluirAtendimentoDialog";
 import LembretesDialog from "../components/LembretesDialog";
+import BloqueioDialog from "../components/BloqueioDialog";
+import BloqueiosDia from "../components/BloqueiosDia";
 import FormularioResponsivo from "../components/FormularioResponsivo";
 import BotaoNovo from "../components/BotaoNovo";
 import useIsMobile from "../hooks/useIsMobile";
@@ -93,6 +95,8 @@ export default function Agenda() {
 
   const [concluindo, setConcluindo] = useState<IAgendamento | null>(null);
   const [lembretesAberto, setLembretesAberto] = useState(false);
+  const [bloqueando, setBloqueando] = useState(false);
+  const [versaoBloqueios, setVersaoBloqueios] = useState(0);
   const [novoClienteVisivel, setNovoClienteVisivel] = useState(false);
   const [novoClienteNome, setNovoClienteNome] = useState("");
   const [novoClienteTelefone, setNovoClienteTelefone] = useState("");
@@ -541,12 +545,10 @@ export default function Agenda() {
         />
         {!mesmoDia(dia, hoje()) && <Button label="Hoje" className="p-button-outlined" onClick={() => setDia(hoje())} />}
       </div>
-      <Button
-        label="Enviar lembretes"
-        icon="pi pi-whatsapp"
-        className="p-button-outlined p-button-success w-full mb-3"
-        onClick={() => setLembretesAberto(true)}
-      />
+      <div className="flex gap-2 mb-3">
+        <Button label="Lembretes" icon="pi pi-whatsapp" className="p-button-outlined p-button-success flex-1" onClick={() => setLembretesAberto(true)} />
+        <Button label="Bloquear" icon="pi pi-ban" className="p-button-outlined p-button-secondary flex-1" onClick={() => setBloqueando(true)} />
+      </div>
     </>
   ) : (
     <div className="flex flex-wrap align-items-center gap-2">
@@ -571,6 +573,7 @@ export default function Agenda() {
         style={{ minWidth: "13rem" }}
       />
       <Button label="Lembretes" icon="pi pi-whatsapp" className="p-button-outlined p-button-success p-button-sm" onClick={() => setLembretesAberto(true)} />
+      <Button label="Bloquear" icon="pi pi-ban" className="p-button-outlined p-button-secondary p-button-sm" onClick={() => setBloqueando(true)} />
     </div>
   );
 
@@ -581,6 +584,17 @@ export default function Agenda() {
         {agendamentos.length} horário(s) · {pendentes} pendente(s) · faturado {moeda(faturado)}
       </div>
     </>
+  );
+
+  const avisosDia = (
+    <BloqueiosDia
+      dia={dia}
+      funcionarios={funcionarios}
+      filtroFuncionario={filtroFuncionario}
+      versao={versaoBloqueios}
+      onRemovido={sucesso}
+      onErro={erro}
+    />
   );
 
   const tabela = (
@@ -605,6 +619,7 @@ export default function Agenda() {
         <>
           <div className="mb-3">{resumoDia}</div>
           {filtros}
+          {avisosDia}
           {tabela}
           <FormularioResponsivo
             titulo={editandoId ? "Remarcar horário" : "Marcar horário"}
@@ -633,6 +648,7 @@ export default function Agenda() {
                 <div>{resumoDia}</div>
                 {filtros}
               </div>
+              {avisosDia}
               {tabela}
             </Card>
           </div>
@@ -640,6 +656,20 @@ export default function Agenda() {
       )}
 
       <LembretesDialog aberto={lembretesAberto} onFechar={() => setLembretesAberto(false)} />
+
+      <BloqueioDialog
+        aberto={bloqueando}
+        diaInicial={dia}
+        funcionarios={funcionarios}
+        onFechar={() => setBloqueando(false)}
+        onSalvo={(msg, atencao) => {
+          setBloqueando(false);
+          setVersaoBloqueios((v) => v + 1);
+          if (atencao) aviso(msg);
+          else sucesso(msg);
+        }}
+        onErro={erro}
+      />
 
       <ConcluirAtendimentoDialog
         agendamento={concluindo}

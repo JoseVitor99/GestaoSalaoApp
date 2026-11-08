@@ -13,6 +13,8 @@ export interface IRemuneracaoDiaria {
   valorDiaria: number;
   valorComissao: number;
   valorTotal: number;
+  valorVales: number;
+  valorAPagar: number;
   pago: boolean;
   pagamentoId?: number | null;
   dataPagamento?: string | null;
@@ -28,7 +30,20 @@ export interface IPagamentoDiario {
   valorDiaria: number;
   valorComissao: number;
   valorTotal: number;
+  valorVales: number;
+  valorPago: number;
   dataPagamento: string;
+}
+
+export interface IVale {
+  id: number;
+  funcionarioId: number;
+  funcionario: string;
+  data: string;
+  valor: number;
+  observacao?: string | null;
+  descontado: boolean;
+  descontadoNoDia?: string | null;
 }
 
 export interface IPainelDia {

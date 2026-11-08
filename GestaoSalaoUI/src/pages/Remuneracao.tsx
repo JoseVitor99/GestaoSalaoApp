@@ -8,11 +8,14 @@ import { Column } from "primereact/column";
 import { Dropdown } from "primereact/dropdown";
 import { Tag } from "primereact/tag";
 import { TabView, TabPanel } from "primereact/tabview";
+import { Dialog } from "primereact/dialog";
+import { InputNumber } from "primereact/inputnumber";
+import { InputText } from "primereact/inputtext";
 import { ConfirmDialog, confirmDialog } from "primereact/confirmdialog";
 
 import { api } from "../services/api";
 import useIsMobile from "../hooks/useIsMobile";
-import { IPagamentoDiario, IRemuneracaoDiaria } from "../interfaces/IRemuneracao";
+import { IPagamentoDiario, IRemuneracaoDiaria, IVale } from "../interfaces/IRemuneracao";
 import IFuncionario from "../interfaces/IFuncionario";
 import { TIPO_REMUNERACAO } from "../utilities/constants";
 import { data, dataExtenso, hoje, hora, mensagemErro, moeda, paraApiData, somarDias } from "../utilities/formatters";
@@ -25,10 +28,14 @@ const recebeDiaria = (l: IRemuneracaoDiaria) => l.tipoRemuneracao !== TIPO_REMUN
 
 // Dia já pago usa os valores gravados; senão recalcula a diária pela marcação "trabalhou"
 const valores = (l: Linha) => {
-  if (l.pago) return { diaria: l.valorDiaria, comissao: l.valorComissao, total: l.valorTotal };
+  if (l.pago)
+    return { diaria: l.valorDiaria, comissao: l.valorComissao, total: l.valorTotal, vales: l.valorVales, aPagar: l.valorTotal - l.valorVales };
   const diaria = recebeDiaria(l) && l.trabalhou ? l.valorDiariaConfigurada : 0;
-  return { diaria, comissao: l.valorComissao, total: diaria + l.valorComissao };
+  const total = diaria + l.valorComissao;
+  return { diaria, comissao: l.valorComissao, total, vales: Math.min(l.valorVales, total), aPagar: Math.max(0, total - l.valorVales) };
 };
+
+const valesTexto = (valor: number) => (valor > 0 ? <span className="text-orange-600">− {moeda(valor)}</span> : <span className="texto-pequeno">—</span>);
 
 export default function Remuneracao() {
   const toast = useRef<Toast>(null);
@@ -41,8 +48,75 @@ export default function Remuneracao() {
 
   const [periodo, setPeriodo] = useState<(Date | null)[]>([somarDias(hoje(), -30), hoje()]);
   const [funcionarios, setFuncionarios] = useState<IFuncionario[]>([]);
+
+  const [vales, setVales] = useState<IVale[]>([]);
+  const [novoVale, setNovoVale] = useState(false);
+  const [valeFuncionario, setValeFuncionario] = useState<number | null>(null);
+  const [valeData, setValeData] = useState<Date>(hoje());
+  const [valeValor, setValeValor] = useState<number | null>(null);
+  const [valeObservacao, setValeObservacao] = useState("");
   const [filtroFuncionario, setFiltroFuncionario] = useState<number | null>(null);
   const [historico, setHistorico] = useState<IPagamentoDiario[]>([]);
+
+  const loadVales = useCallback(async () => {
+    try {
+      const r = await api.get("/vales");
+      setVales(r.data || []);
+    } catch {
+      setVales([]);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadVales();
+  }, [loadVales]);
+
+  const abrirNovoVale = () => {
+    setValeFuncionario(null);
+    setValeData(hoje());
+    setValeValor(null);
+    setValeObservacao("");
+    setNovoVale(true);
+  };
+
+  const salvarVale = async () => {
+    if (!valeFuncionario) return erro("Selecione o funcionário.");
+    if (!valeValor || valeValor <= 0) return erro("Informe o valor do vale.");
+    try {
+      await api.post("/vales", {
+        funcionarioId: valeFuncionario,
+        data: paraApiData(valeData),
+        valor: valeValor,
+        observacao: valeObservacao.trim() || null,
+      });
+      setNovoVale(false);
+      sucesso("Vale registrado. Ele será descontado no próximo pagamento.");
+      loadVales();
+      load();
+    } catch (err: any) {
+      erro(mensagemErro(err, "Erro ao registrar o vale."));
+    }
+  };
+
+  const excluirVale = (v: IVale) =>
+    confirmDialog({
+      header: "Excluir vale",
+      icon: "pi pi-exclamation-triangle",
+      message: `Excluir o vale de ${moeda(v.valor)} de ${v.funcionario}?`,
+      acceptLabel: "Excluir",
+      rejectLabel: "Voltar",
+      acceptClassName: "p-button-danger",
+      accept: async () => {
+        try {
+          await api.delete(`/vales/${v.id}`);
+          sucesso("Vale excluído.");
+          loadVales();
+          load();
+        } catch (err: any) {
+          erro(mensagemErro(err, "Erro ao excluir o vale."));
+        }
+      },
+    });
 
   const sucesso = (detail: string) => toast.current?.show({ severity: "success", summary: "Sucesso", detail, life: 3000 });
   const erro = (detail: string) => toast.current?.show({ severity: "error", summary: "Erro", detail, life: 5000 });
@@ -106,7 +180,7 @@ export default function Remuneracao() {
     linhas.forEach((l) => {
       faturado += l.totalAtendimentos;
       if (l.pago) pago += l.valorTotal;
-      else pendente += valores(l).total;
+      else pendente += valores(l).aPagar;
     });
     return { pago, pendente, faturado };
   }, [linhas]);
@@ -119,11 +193,17 @@ export default function Remuneracao() {
       message: (
         <div>
           <div className="mb-2">
-            Pagar <b>{moeda(v.total)}</b> para <b>{l.funcionario}</b> referente a {data(paraApiData(dia))}?
+            Pagar <b>{moeda(v.aPagar)}</b> para <b>{l.funcionario}</b> referente a {data(paraApiData(dia))}?
           </div>
           <div className="texto-pequeno">
             Diária {moeda(v.diaria)} + comissão {moeda(v.comissao)} ({l.quantidadeAtendimentos} atendimento(s))
+            {v.vales > 0 && ` − vales ${moeda(v.vales)}`}
           </div>
+          {l.valorVales > v.total && (
+            <div className="texto-pequeno text-orange-600 mt-2">
+              Os vales passam do valor do dia; {moeda(l.valorVales - v.total)} continuam em aberto para o próximo pagamento.
+            </div>
+          )}
         </div>
       ),
       acceptLabel: "Pagar",
@@ -139,6 +219,7 @@ export default function Remuneracao() {
           sucesso(`Pagamento de ${l.funcionario} registrado.`);
           load();
           loadHistorico();
+          loadVales();
         } catch (err: any) {
           erro(mensagemErro(err, "Erro ao registrar pagamento."));
         }
@@ -160,6 +241,7 @@ export default function Remuneracao() {
           sucesso("Pagamento estornado.");
           load();
           loadHistorico();
+          loadVales();
         } catch (err: any) {
           erro(mensagemErro(err, "Erro ao estornar."));
         }
@@ -173,7 +255,7 @@ export default function Remuneracao() {
       toast.current?.show({ severity: "info", summary: "Nada a pagar", detail: "Não há pagamentos pendentes com valor.", life: 3000 });
       return;
     }
-    const total = pendentes.reduce((acc, l) => acc + valores(l).total, 0);
+    const total = pendentes.reduce((acc, l) => acc + valores(l).aPagar, 0);
 
     confirmDialog({
       header: "Pagar todos",
@@ -199,6 +281,7 @@ export default function Remuneracao() {
         else sucesso("Todos os pagamentos foram registrados.");
         load();
         loadHistorico();
+        loadVales();
       },
     });
   };
@@ -261,6 +344,8 @@ export default function Remuneracao() {
         onClick={() => pagar(l)}
       />
     );
+
+  const totalValesAbertos = vales.filter((v) => !v.descontado).reduce((acc, v) => acc + v.valor, 0);
 
   const totalHistorico = historico.reduce((acc, p) => acc + p.valorTotal, 0);
 
@@ -338,9 +423,17 @@ export default function Remuneracao() {
                 <div className="valor">{moeda(v.diaria)}</div>
               </div>
               <div>
-                <div className="rotulo">Total</div>
+                <div className="rotulo">Ganho do dia</div>
+                <div className="valor">{moeda(v.total)}</div>
+              </div>
+              <div>
+                <div className="rotulo">Vales</div>
+                <div className="valor">{valesTexto(v.vales)}</div>
+              </div>
+              <div>
+                <div className="rotulo">{l.pago ? "Entregue" : "A pagar"}</div>
                 <div className="valor text-lg" style={{ color: "var(--primary-color)" }}>
-                  {moeda(v.total)}
+                  {moeda(v.aPagar)}
                 </div>
               </div>
             </div>
@@ -365,7 +458,7 @@ export default function Remuneracao() {
                 />
               ) : (
                 <Button
-                  label={`Pagar ${moeda(v.total)}`}
+                  label={v.aPagar > 0 ? `Pagar ${moeda(v.aPagar)}` : "Quitar com os vales"}
                   icon="pi pi-wallet"
                   className="p-button-success"
                   disabled={v.total <= 0}
@@ -428,6 +521,7 @@ export default function Remuneracao() {
           <div className="flex justify-content-between align-items-center mt-2">
             <span className="texto-pequeno">
               {p.quantidadeAtendimentos} atend. · diária {moeda(p.valorDiaria)} · comissão {moeda(p.valorComissao)}
+              {p.valorVales > 0 && ` · vales ${moeda(p.valorVales)} · entregue ${moeda(p.valorPago)}`}
             </span>
             <Button icon="pi pi-undo" className="p-button-text p-button-danger p-button-sm" aria-label="Estornar" onClick={() => estornar(p.id, p.funcionario)} />
           </div>
@@ -486,7 +580,9 @@ export default function Remuneracao() {
               <Column header="Trabalhou" body={trabalhouTemplate} style={{ width: "6rem" }} />
               <Column header="Diária" style={{ width: "10rem" }} body={(l: Linha) => moeda(valores(l).diaria)} />
               <Column header="Comissão" style={{ width: "10rem" }} body={(l: Linha) => moeda(valores(l).comissao)} />
-              <Column header="Total" style={{ width: "10rem" }} body={(l: Linha) => <span className="font-bold">{moeda(valores(l).total)}</span>} />
+              <Column header="Ganho" style={{ width: "10rem" }} body={(l: Linha) => moeda(valores(l).total)} />
+              <Column header="Vales" style={{ width: "8rem" }} body={(l: Linha) => valesTexto(valores(l).vales)} />
+              <Column header="A pagar" style={{ width: "8rem" }} body={(l: Linha) => <span className="font-bold">{moeda(valores(l).aPagar)}</span>} />
               <Column header="Situação" body={situacaoTemplate} />
               <Column body={acoesTemplate} style={{ width: "8rem" }} />
             </DataTable>
@@ -543,7 +639,9 @@ export default function Remuneracao() {
               <Column header="Atendimentos" body={(p: IPagamentoDiario) => `${p.quantidadeAtendimentos} · ${moeda(p.totalAtendimentos)}`} />
               <Column header="Diária" body={(p: IPagamentoDiario) => moeda(p.valorDiaria)} />
               <Column header="Comissão" body={(p: IPagamentoDiario) => moeda(p.valorComissao)} />
-              <Column header="Total" body={(p: IPagamentoDiario) => <span className="font-bold">{moeda(p.valorTotal)}</span>} />
+              <Column header="Ganho" body={(p: IPagamentoDiario) => <span className="font-bold">{moeda(p.valorTotal)}</span>} />
+              <Column header="Vales" body={(p: IPagamentoDiario) => valesTexto(p.valorVales)} />
+              <Column header="Entregue" body={(p: IPagamentoDiario) => moeda(p.valorPago)} />
               <Column header="Pago em" body={(p: IPagamentoDiario) => `${data(p.dataPagamento)} ${hora(p.dataPagamento)}`} />
               <Column
                 body={(p: IPagamentoDiario) => (
@@ -559,7 +657,86 @@ export default function Remuneracao() {
           </div>
           )}
         </TabPanel>
+        <TabPanel header="Vales" leftIcon="pi pi-money-bill mr-2">
+          <div className="flex flex-wrap align-items-center justify-content-between gap-3 mb-3">
+            <div>
+              <div className="texto-pequeno">Em aberto (ainda não descontado)</div>
+              <div className="text-xl font-bold text-orange-600">{moeda(totalValesAbertos)}</div>
+            </div>
+            <Button label="Novo vale" icon="pi pi-plus" className={mobile ? "w-full" : ""} onClick={abrirNovoVale} />
+          </div>
+          {vales.length === 0 && <div className="item-lista text-center texto-pequeno py-4">Nenhum vale registrado nos últimos 30 dias.</div>}
+          {vales.map((v) => (
+            <div key={v.id} className={`item-lista ${v.descontado ? "opacity-70" : ""}`}>
+              <div className="flex justify-content-between align-items-start gap-2">
+                <div style={{ minWidth: 0 }}>
+                  <div className="item-titulo">{v.funcionario}</div>
+                  <div className="texto-pequeno mt-1">
+                    {data(v.data)}
+                    {v.observacao && ` · ${v.observacao}`}
+                  </div>
+                </div>
+                <div className="text-right">
+                  <div className="font-bold text-lg">{moeda(v.valor)}</div>
+                  {v.descontado ? (
+                    <Tag value={`Descontado em ${data(v.descontadoNoDia!)}`} severity="success" rounded />
+                  ) : (
+                    <Tag value="Em aberto" severity="warning" rounded />
+                  )}
+                </div>
+              </div>
+              {!v.descontado && (
+                <div className="flex justify-content-end">
+                  <Button label="Excluir" icon="pi pi-trash" className="p-button-text p-button-danger p-button-sm" onClick={() => excluirVale(v)} />
+                </div>
+              )}
+            </div>
+          ))}
+        </TabPanel>
       </TabView>
+
+      <Dialog
+        header="Novo vale"
+        visible={novoVale}
+        onHide={() => setNovoVale(false)}
+        style={{ width: "26rem" }}
+        breakpoints={{ "640px": "95vw" }}
+        position={mobile ? "bottom" : "center"}
+        modal
+        footer={
+          <div className="flex justify-content-end gap-2">
+            <Button label="Voltar" className={`p-button-text ${mobile ? "flex-1" : ""}`} onClick={() => setNovoVale(false)} />
+            <Button label="Registrar" icon="pi pi-check" className={`p-button-success ${mobile ? "flex-1" : ""}`} onClick={salvarVale} />
+          </div>
+        }
+      >
+        <div className="field mb-3">
+          <label className="block mb-2">Funcionário</label>
+          <Dropdown
+            value={valeFuncionario}
+            onChange={(e) => setValeFuncionario(e.value)}
+            options={funcionarios.filter((f) => f.ativo)}
+            optionLabel="nome"
+            optionValue="id"
+            placeholder="Selecione"
+            className="w-full"
+          />
+        </div>
+        <div className="grid">
+          <div className="col-6 pb-0">
+            <label className="block mb-2">Data</label>
+            <Calendar value={valeData} onChange={(e) => e.value && setValeData(e.value as Date)} maxDate={hoje()} dateFormat="dd/mm/yy" readOnlyInput touchUI={mobile} className="w-full" />
+          </div>
+          <div className="col-6 pb-0">
+            <label className="block mb-2">Valor</label>
+            <InputNumber value={valeValor} onValueChange={(e) => setValeValor(e.value ?? null)} mode="currency" currency="BRL" locale="pt-BR" className="w-full" inputClassName="w-full" />
+          </div>
+        </div>
+        <div className="field mt-3 mb-0">
+          <label className="block mb-2">Observação</label>
+          <InputText value={valeObservacao} onChange={(e) => setValeObservacao(e.target.value)} className="w-full" placeholder="Opcional" maxLength={200} />
+        </div>
+      </Dialog>
     </>
   );
 }

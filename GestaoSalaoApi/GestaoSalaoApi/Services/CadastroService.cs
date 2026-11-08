@@ -39,6 +39,9 @@ namespace GestaoSalaoApi.Services
             if (!recebeDiaria) funcionario.ValorDiaria = 0;
             if (!recebeComissao) funcionario.PercentualComissao = 0;
 
+            if (funcionario.DiasFolga.Any(d => d < 0 || d > 6))
+                throw new RegraNegocioException("Dia de folga inválido.");
+
             funcionario.Nome = funcionario.Nome.Trim();
         }
 

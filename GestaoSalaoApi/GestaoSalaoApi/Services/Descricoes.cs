@@ -23,6 +23,17 @@ namespace GestaoSalaoApi.Services
             _ => forma.ToString() ?? string.Empty
         };
 
+        public static string DiaSemana(DayOfWeek dia) => dia switch
+        {
+            DayOfWeek.Sunday => "domingo",
+            DayOfWeek.Monday => "segunda-feira",
+            DayOfWeek.Tuesday => "terça-feira",
+            DayOfWeek.Wednesday => "quarta-feira",
+            DayOfWeek.Thursday => "quinta-feira",
+            DayOfWeek.Friday => "sexta-feira",
+            _ => "sábado"
+        };
+
         public static string TipoRemuneracao(TipoRemuneracao tipo) => tipo switch
         {
             Entidade.TipoRemuneracao.Diaria => "Diária fixa",

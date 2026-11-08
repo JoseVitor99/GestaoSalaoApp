@@ -62,6 +62,34 @@ namespace GestaoSalaoApi.Migrations
                     b.ToTable("Agendamentos");
                 });
 
+            modelBuilder.Entity("GestaoSalaoApi.Entidade.Bloqueio", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("Fim")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int?>("FuncionarioId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("Inicio")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Motivo")
+                        .HasMaxLength(200)
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("FuncionarioId");
+
+                    b.HasIndex("Inicio", "Fim");
+
+                    b.ToTable("Bloqueios");
+                });
+
             modelBuilder.Entity("GestaoSalaoApi.Entidade.Cliente", b =>
                 {
                     b.Property<int>("Id")
@@ -106,6 +134,10 @@ namespace GestaoSalaoApi.Migrations
                     b.Property<bool>("Ativo")
                         .HasColumnType("INTEGER");
 
+                    b.Property<string>("Folgas")
+                        .HasMaxLength(20)
+                        .HasColumnType("TEXT");
+
                     b.Property<string>("Funcao")
                         .HasMaxLength(100)
                         .HasColumnType("TEXT");
@@ -131,6 +163,90 @@ namespace GestaoSalaoApi.Migrations
                     b.HasKey("Id");
 
                     b.ToTable("Funcionarios");
+                });
+
+            modelBuilder.Entity("GestaoSalaoApi.Entidade.HorarioFuncionamento", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("Aberto")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<TimeSpan>("Abertura")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("DiaSemana")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<TimeSpan>("Fechamento")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("DiaSemana")
+                        .IsUnique();
+
+                    b.ToTable("HorariosFuncionamento");
+
+                    b.HasData(
+                        new
+                        {
+                            Id = 1,
+                            Aberto = false,
+                            Abertura = new TimeSpan(0, 8, 0, 0, 0),
+                            DiaSemana = 0,
+                            Fechamento = new TimeSpan(0, 19, 0, 0, 0)
+                        },
+                        new
+                        {
+                            Id = 2,
+                            Aberto = true,
+                            Abertura = new TimeSpan(0, 8, 0, 0, 0),
+                            DiaSemana = 1,
+                            Fechamento = new TimeSpan(0, 19, 0, 0, 0)
+                        },
+                        new
+                        {
+                            Id = 3,
+                            Aberto = true,
+                            Abertura = new TimeSpan(0, 8, 0, 0, 0),
+                            DiaSemana = 2,
+                            Fechamento = new TimeSpan(0, 19, 0, 0, 0)
+                        },
+                        new
+                        {
+                            Id = 4,
+                            Aberto = true,
+                            Abertura = new TimeSpan(0, 8, 0, 0, 0),
+                            DiaSemana = 3,
+                            Fechamento = new TimeSpan(0, 19, 0, 0, 0)
+                        },
+                        new
+                        {
+                            Id = 5,
+                            Aberto = true,
+                            Abertura = new TimeSpan(0, 8, 0, 0, 0),
+                            DiaSemana = 4,
+                            Fechamento = new TimeSpan(0, 19, 0, 0, 0)
+                        },
+                        new
+                        {
+                            Id = 6,
+                            Aberto = true,
+                            Abertura = new TimeSpan(0, 8, 0, 0, 0),
+                            DiaSemana = 5,
+                            Fechamento = new TimeSpan(0, 19, 0, 0, 0)
+                        },
+                        new
+                        {
+                            Id = 7,
+                            Aberto = true,
+                            Abertura = new TimeSpan(0, 8, 0, 0, 0),
+                            DiaSemana = 6,
+                            Fechamento = new TimeSpan(0, 17, 0, 0, 0)
+                        });
                 });
 
             modelBuilder.Entity("GestaoSalaoApi.Entidade.PagamentoDiario", b =>
@@ -161,6 +277,9 @@ namespace GestaoSalaoApi.Migrations
                         .HasColumnType("TEXT");
 
                     b.Property<decimal>("ValorTotal")
+                        .HasColumnType("TEXT");
+
+                    b.Property<decimal>("ValorVales")
                         .HasColumnType("TEXT");
 
                     b.HasKey("Id");
@@ -294,6 +413,40 @@ namespace GestaoSalaoApi.Migrations
                     b.ToTable("Usuarios");
                 });
 
+            modelBuilder.Entity("GestaoSalaoApi.Entidade.Vale", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("Data")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("DataRegistro")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("FuncionarioId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Observacao")
+                        .HasMaxLength(200)
+                        .HasColumnType("TEXT");
+
+                    b.Property<int?>("PagamentoId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<decimal>("Valor")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("FuncionarioId");
+
+                    b.HasIndex("PagamentoId");
+
+                    b.ToTable("Vales");
+                });
+
             modelBuilder.Entity("GestaoSalaoApi.Entidade.Agendamento", b =>
                 {
                     b.HasOne("GestaoSalaoApi.Entidade.Cliente", "Cliente")
@@ -321,6 +474,16 @@ namespace GestaoSalaoApi.Migrations
                     b.Navigation("Servico");
                 });
 
+            modelBuilder.Entity("GestaoSalaoApi.Entidade.Bloqueio", b =>
+                {
+                    b.HasOne("GestaoSalaoApi.Entidade.Funcionario", "Funcionario")
+                        .WithMany()
+                        .HasForeignKey("FuncionarioId")
+                        .OnDelete(DeleteBehavior.Cascade);
+
+                    b.Navigation("Funcionario");
+                });
+
             modelBuilder.Entity("GestaoSalaoApi.Entidade.PagamentoDiario", b =>
                 {
                     b.HasOne("GestaoSalaoApi.Entidade.Funcionario", "Funcionario")
@@ -340,6 +503,24 @@ namespace GestaoSalaoApi.Migrations
                         .OnDelete(DeleteBehavior.SetNull);
 
                     b.Navigation("Funcionario");
+                });
+
+            modelBuilder.Entity("GestaoSalaoApi.Entidade.Vale", b =>
+                {
+                    b.HasOne("GestaoSalaoApi.Entidade.Funcionario", "Funcionario")
+                        .WithMany()
+                        .HasForeignKey("FuncionarioId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("GestaoSalaoApi.Entidade.PagamentoDiario", "Pagamento")
+                        .WithMany()
+                        .HasForeignKey("PagamentoId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.Navigation("Funcionario");
+
+                    b.Navigation("Pagamento");
                 });
 #pragma warning restore 612, 618
         }

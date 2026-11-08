@@ -104,6 +104,10 @@ services    -> Configuração do acesso à API (axios)
 * Remarcar, cancelar e excluir atendimentos
 * **Não compareceu:** depois que o horário passa, dá para marcar a falta da cliente; o histórico da cliente mostra quantas faltas ela tem
 * **Lembretes por WhatsApp:** o botão "Lembretes" da agenda lista as clientes do dia escolhido (amanhã, por padrão) e abre o WhatsApp de cada uma com a mensagem pronta; quem já recebeu fica marcado
+* **Horário de funcionamento:** dias e horários em que o salão abre (menu do usuário → Horário e bloqueios); a agenda não aceita horários fora do expediente
+* **Folga semanal:** marcada no cadastro de cada funcionário
+* **Bloqueios:** almoço, compromisso, férias ou feriado, de um profissional ou do salão inteiro, criados pelo botão "Bloquear" da agenda; o funcionário pode bloquear só a própria agenda
+* **Vales (adiantamentos):** registrados na aba "Vales" da Remuneração e descontados automaticamente no próximo pagamento do funcionário; se o vale passar do valor do dia, o restante continua em aberto. Estornar o pagamento devolve os vales
 * **Comanda:** ao concluir, abre a comanda da cliente no dia com todos os serviços pendentes; dá para ajustar valores (desconto) e receber tudo com uma forma de pagamento
 
 ### Clientes
@@ -224,6 +228,12 @@ A aplicação estará disponível em: http://localhost:3000
 | POST | /api/agendamentos/lote | Marca vários serviços da mesma cliente de uma vez |
 | POST | /api/agendamentos/fechar-comanda | Conclui os serviços da comanda com uma forma de pagamento |
 | PUT | /api/agendamentos/{id}/nao-compareceu | Marca que a cliente não compareceu |
+| GET/PUT | /api/horarios | Horário de funcionamento (alterar: administrador) |
+| GET/POST | /api/bloqueios | Listar (`?inicio=&fim=&funcionarioId=`) / criar bloqueio de agenda |
+| DELETE | /api/bloqueios/{id} | Remover bloqueio |
+| GET/POST | /api/vales | Listar / registrar vales (administrador) |
+| DELETE | /api/vales/{id} | Excluir vale ainda não descontado |
+| GET | /api/vales/meus | Vales do funcionário logado |
 | GET | /api/auth/situacao | Indica se é o primeiro acesso (sem usuários) |
 | POST | /api/auth/primeiro-acesso | Cria o primeiro administrador |
 | POST | /api/auth/login | Entra no sistema (retorna o token) |

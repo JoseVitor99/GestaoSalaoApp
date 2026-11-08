@@ -8,10 +8,12 @@ namespace GestaoSalaoApi.Services
     public class AgendamentoService
     {
         private readonly AppDbContext _context;
+        private readonly AgendaService _agenda;
 
-        public AgendamentoService(AppDbContext context)
+        public AgendamentoService(AppDbContext context, AgendaService agenda)
         {
             _context = context;
+            _agenda = agenda;
         }
 
         public async Task<List<AgendamentoDTO>> Listar(DateTime inicio, DateTime fim, int? funcionarioId, int? clienteId)
@@ -182,7 +184,12 @@ namespace GestaoSalaoApi.Services
             if (agendamento.Status != StatusAgendamento.Agendado)
                 throw new RegraNegocioException("Somente agendamentos pendentes podem ser alterados.");
 
-            var (_, _, servico) = await ValidarDados(dto, id);
+            // Expediente, folga e bloqueios só são conferidos se o horário ou a profissional mudar
+            var mudouHorario = SemSegundos(dto.DataHora) != agendamento.DataHora
+                || dto.FuncionarioId != agendamento.FuncionarioId
+                || dto.ServicoId != agendamento.ServicoId;
+
+            var (_, _, servico) = await ValidarDados(dto, id, mudouHorario);
 
             var novaDataHora = SemSegundos(dto.DataHora);
             if (novaDataHora != agendamento.DataHora && novaDataHora.Date < DateTime.Today)
@@ -318,7 +325,7 @@ namespace GestaoSalaoApi.Services
         private static DateTime SemSegundos(DateTime data) =>
             new(data.Year, data.Month, data.Day, data.Hour, data.Minute, 0, DateTimeKind.Unspecified);
 
-        private async Task<(Cliente, Funcionario, Servico)> ValidarDados(AgendamentoInputDTO dto, int? ignorarAgendamentoId)
+        private async Task<(Cliente, Funcionario, Servico)> ValidarDados(AgendamentoInputDTO dto, int? ignorarAgendamentoId, bool conferirDisponibilidade = true)
         {
             var cliente = await _context.Clientes.FindAsync(dto.ClienteId)
                 ?? throw new RegraNegocioException("Cliente não encontrado.");
@@ -366,6 +373,9 @@ namespace GestaoSalaoApi.Services
                     $"{funcionario.Nome} já tem atendimento das {conflito.DataHora:HH:mm} às {fimConflito:HH:mm} " +
                     $"({conflito.Cliente?.Nome}). Escolha outro horário.");
             }
+
+            if (conferirDisponibilidade)
+                await _agenda.ValidarDisponibilidade(funcionario, inicio, fim);
 
             return (cliente, funcionario, servico);
         }

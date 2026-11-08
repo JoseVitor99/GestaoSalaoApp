@@ -76,6 +76,7 @@ namespace GestaoSalaoApi.Controllers
             existente.ValorDiaria = funcionario.ValorDiaria;
             existente.PercentualComissao = funcionario.PercentualComissao;
             existente.Ativo = funcionario.Ativo;
+            existente.Folgas = funcionario.Folgas;
 
             await _context.SaveChangesAsync();
             return Ok(existente);

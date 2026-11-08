@@ -10,7 +10,7 @@ import { useAutenticacao } from "../services/autenticacao";
 import StatusTag from "../components/StatusTag";
 import useIsMobile from "../hooks/useIsMobile";
 import IAgendamento from "../interfaces/IAgendamento";
-import { IPagamentoDiario, IRemuneracaoDiaria } from "../interfaces/IRemuneracao";
+import { IPagamentoDiario, IRemuneracaoDiaria, IVale } from "../interfaces/IRemuneracao";
 import { data, dataExtenso, hoje, hora, mensagemErro, moeda, paraApiData, somarDias } from "../utilities/formatters";
 
 export default function MeusGanhos() {
@@ -21,6 +21,7 @@ export default function MeusGanhos() {
   const [remuneracao, setRemuneracao] = useState<IRemuneracaoDiaria | null>(null);
   const [atendimentos, setAtendimentos] = useState<IAgendamento[]>([]);
   const [historico, setHistorico] = useState<IPagamentoDiario[]>([]);
+  const [vales, setVales] = useState<IVale[]>([]);
   const [erro, setErro] = useState("");
 
   const funcionarioId = usuario?.funcionarioId;
@@ -51,6 +52,10 @@ export default function MeusGanhos() {
       .get("/remuneracoes/minha/historico")
       .then((r) => setHistorico(r.data || []))
       .catch(() => undefined);
+    api
+      .get("/vales/meus")
+      .then((r) => setVales(r.data || []))
+      .catch(() => undefined);
   }, [funcionarioId]);
 
   if (!funcionarioId)
@@ -63,6 +68,7 @@ export default function MeusGanhos() {
     );
 
   const totalHistorico = historico.reduce((acc, p) => acc + p.valorTotal, 0);
+  const valesAbertos = vales.filter((v) => !v.descontado);
 
   const valor = (rotulo: string, conteudo: string, destaque = false) => (
     <div className="col-6 md:col-3">
@@ -127,8 +133,14 @@ export default function MeusGanhos() {
               {valor("Atendimentos", `${remuneracao.quantidadeAtendimentos} · ${moeda(remuneracao.totalAtendimentos)}`)}
               {valor("Comissão", moeda(remuneracao.valorComissao))}
               {valor("Diária", moeda(remuneracao.valorDiaria))}
-              {valor("Total do dia", moeda(remuneracao.valorTotal), true)}
+              {valor("Ganho do dia", moeda(remuneracao.valorTotal), remuneracao.valorVales === 0)}
             </div>
+            {remuneracao.valorVales > 0 && (
+              <div className="grid mt-1">
+                {valor(remuneracao.pago ? "Vales descontados" : "Vales a descontar", `− ${moeda(Math.min(remuneracao.valorVales, remuneracao.valorTotal))}`)}
+                {valor(remuneracao.pago ? "Recebido no pagamento" : "A receber", moeda(remuneracao.valorAPagar), true)}
+              </div>
+            )}
             {!remuneracao.pago && (
               <small className="texto-pequeno block mt-2">
                 Valor previsto. Ele é confirmado quando o administrador registra o pagamento do dia.
@@ -162,6 +174,28 @@ export default function MeusGanhos() {
         </div>
 
         <div className="col-12 lg:col-5">
+          {vales.length > 0 && (
+            <Card title="Meus vales" className="mb-3">
+              {vales.map((v) => (
+                <div key={v.id} className="linha-valor">
+                  <div>
+                    <div className="font-medium">{data(v.data)}</div>
+                    <div className="texto-pequeno">
+                      {v.descontado ? `Descontado no pagamento de ${data(v.descontadoNoDia!)}` : "Em aberto"}
+                      {v.observacao && ` · ${v.observacao}`}
+                    </div>
+                  </div>
+                  <div className={`font-bold ${v.descontado ? "" : "text-orange-600"}`}>{moeda(v.valor)}</div>
+                </div>
+              ))}
+              {valesAbertos.length > 0 && (
+                <div className="flex justify-content-between pt-3">
+                  <span className="font-bold">Em aberto</span>
+                  <span className="font-bold text-orange-600">{moeda(valesAbertos.reduce((acc, v) => acc + v.valor, 0))}</span>
+                </div>
+              )}
+            </Card>
+          )}
           <Card title="Pagamentos dos últimos 30 dias">
             {historico.length === 0 && <div className="texto-pequeno">Nenhum pagamento registrado.</div>}
             {historico.map((p) => (
@@ -170,6 +204,7 @@ export default function MeusGanhos() {
                   <div className="font-medium">{data(p.data)}</div>
                   <div className="texto-pequeno">
                     {p.quantidadeAtendimentos} atend. · diária {moeda(p.valorDiaria)} · comissão {moeda(p.valorComissao)}
+                    {p.valorVales > 0 && ` · vales ${moeda(p.valorVales)}`}
                   </div>
                 </div>
                 <div className="font-bold">{moeda(p.valorTotal)}</div>

@@ -67,6 +67,7 @@ export default function MenuUsuario() {
     { label: "Alterar senha", icon: "pi pi-key", command: () => setTrocandoSenha(true) },
     ...(administrador
       ? [
+          { label: "Horário e bloqueios", icon: "pi pi-clock", command: () => navigate("/horarios") },
           { label: "Usuários", icon: "pi pi-user-edit", command: () => navigate("/usuarios") },
           { label: "Baixar backup", icon: "pi pi-download", command: backup },
         ]
